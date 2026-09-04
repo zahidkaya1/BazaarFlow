@@ -6,32 +6,33 @@ import {
     Settings,
     ShoppingCart,
 } from 'lucide-react'
+import { NavLink } from 'react-router-dom'
 
 const navigationItems = [
     {
         label: 'Genel Bakış',
+        path: '/',
         icon: LayoutDashboard,
-        active: true,
     },
     {
         label: 'Satış',
+        path: '/sales',
         icon: ShoppingCart,
-        active: false,
     },
     {
         label: 'Stok',
+        path: '/inventory',
         icon: PackagePlus,
-        active: false,
     },
     {
         label: 'Ürünler',
+        path: '/products',
         icon: Boxes,
-        active: false,
     },
     {
         label: 'Raporlar',
+        path: '/reports',
         icon: ChartNoAxesCombined,
-        active: false,
     },
 ]
 
@@ -54,24 +55,33 @@ function Sidebar() {
                     const Icon = item.icon
 
                     return (
-                        <button
-                            key={item.label}
-                            type="button"
-                            className={`navigation-item ${item.active ? 'navigation-item-active' : ''
-                                }`}
+                        <NavLink
+                            key={item.path}
+                            to={item.path}
+                            end={item.path === '/'}
+                            className={({ isActive }) =>
+                                `navigation-item ${isActive ? 'navigation-item-active' : ''
+                                }`
+                            }
                         >
                             <Icon size={20} strokeWidth={1.8} />
                             <span>{item.label}</span>
-                        </button>
+                        </NavLink>
                     )
                 })}
             </nav>
 
             <div className="sidebar-footer">
-                <button type="button" className="navigation-item">
+                <NavLink
+                    to="/settings"
+                    className={({ isActive }) =>
+                        `navigation-item ${isActive ? 'navigation-item-active' : ''
+                        }`
+                    }
+                >
                     <Settings size={20} strokeWidth={1.8} />
                     <span>Ayarlar</span>
-                </button>
+                </NavLink>
             </div>
         </aside>
     )
