@@ -1,4 +1,6 @@
 import ProductsPage from './pages/ProductsPage'
+import InventoryPage from './pages/InventoryPage'
+import SalesPage from './pages/SalesPage'
 import { Route, Routes } from 'react-router-dom'
 import PlaceholderPage from './components/common/PlaceholderPage'
 import Sidebar from './components/layout/Sidebar'
@@ -13,26 +15,8 @@ function App() {
         <Routes>
           <Route path="/" element={<DashboardPage />} />
 
-          <Route
-            path="/sales"
-            element={
-              <PlaceholderPage
-                title="Satış"
-                description="Yeni satışları kaydedin ve geçmiş satışları yönetin."
-              />
-            }
-          />
-
-          <Route
-            path="/inventory"
-            element={
-              <PlaceholderPage
-                title="Stok"
-                description="Stok girişlerini, partileri ve mevcut stok durumunu yönetin."
-              />
-            }
-          />
-
+          <Route path="/sales" element={<SalesPage />} />
+          <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/products" element={<ProductsPage />} />
 
           <Route
