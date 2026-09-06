@@ -1,6 +1,7 @@
 import ProductsPage from './pages/ProductsPage'
 import InventoryPage from './pages/InventoryPage'
 import SalesPage from './pages/SalesPage'
+import ReportsPage from './pages/ReportsPage'
 import { Route, Routes } from 'react-router-dom'
 import PlaceholderPage from './components/common/PlaceholderPage'
 import Sidebar from './components/layout/Sidebar'
@@ -21,12 +22,7 @@ function App() {
 
           <Route
             path="/reports"
-            element={
-              <PlaceholderPage
-                title="Raporlar"
-                description="Satış, ciro, maliyet ve kârlılık raporlarını inceleyin."
-              />
-            }
+            element={<ReportsPage />}
           />
 
           <Route

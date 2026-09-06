@@ -1,0 +1,1287 @@
+import { useMemo, useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import {
+    CalendarDays,
+    CircleDollarSign,
+    Download,
+    PackageCheck,
+    Search,
+    TrendingUp,
+    Trophy,
+    WalletCards,
+    Warehouse,
+} from 'lucide-react'
+import { inventoryService } from '../services/inventoryService'
+import { productService } from '../services/productService'
+import {
+    salesService,
+    type SaleHistoryRecord,
+} from '../services/salesService'
+import type { InventoryLot } from '../types/inventoryLot'
+import type { Product } from '../types/product'
+import { formatMoneyFromMinor } from '../utils/money'
+
+type ReportPeriod =
+    | 'today'
+    | 'week'
+    | 'month'
+    | 'year'
+    | 'custom'
+
+type ProductReportRow = {
+    productId: string
+    productName: string
+    sku?: string
+    quantity: number
+    transactionCount: number
+    revenueMinor: number
+    costMinor: number
+    grossProfitMinor: number
+    discountMinor: number
+}
+
+type DailyReportRow = {
+    saleDate: string
+    quantity: number
+    transactionCount: number
+    revenueMinor: number
+    costMinor: number
+    grossProfitMinor: number
+    discountMinor: number
+}
+
+function formatDateValue(date: Date): string {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+
+    return `${year}-${month}-${day}`
+}
+
+function formatDisplayDate(value: string): string {
+    const [year, month, day] = value.split('-')
+
+    return `${day}.${month}.${year}`
+}
+
+function getTodayDateValue(): string {
+    return formatDateValue(new Date())
+}
+
+function getWeekRange(): {
+    start: string
+    end: string
+} {
+    const today = new Date()
+    const day = today.getDay()
+
+    const mondayOffset =
+        day === 0 ? -6 : 1 - day
+
+    const monday = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate() + mondayOffset,
+    )
+
+    const sunday = new Date(
+        monday.getFullYear(),
+        monday.getMonth(),
+        monday.getDate() + 6,
+    )
+
+    return {
+        start: formatDateValue(monday),
+        end: formatDateValue(sunday),
+    }
+}
+
+function getMonthRange(): {
+    start: string
+    end: string
+} {
+    const today = new Date()
+
+    const firstDay = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        1,
+    )
+
+    const lastDay = new Date(
+        today.getFullYear(),
+        today.getMonth() + 1,
+        0,
+    )
+
+    return {
+        start: formatDateValue(firstDay),
+        end: formatDateValue(lastDay),
+    }
+}
+
+function getYearRange(): {
+    start: string
+    end: string
+} {
+    const today = new Date()
+
+    return {
+        start: `${today.getFullYear()}-01-01`,
+        end: `${today.getFullYear()}-12-31`,
+    }
+}
+
+function getPeriodLabel(period: ReportPeriod): string {
+    switch (period) {
+        case 'today':
+            return 'Bugün'
+        case 'week':
+            return 'Bu Hafta'
+        case 'month':
+            return 'Bu Ay'
+        case 'year':
+            return 'Bu Yıl'
+        case 'custom':
+            return 'Özel Tarih'
+    }
+}
+
+function normalizeSearch(value: string): string {
+    return value
+        .trim()
+        .toLocaleLowerCase('tr-TR')
+}
+
+function filterRecordItems(
+    record: SaleHistoryRecord,
+    query: string,
+    productMap: Map<string, Product>,
+): SaleHistoryRecord | null {
+    if (!query) {
+        return record
+    }
+
+    const matchingItems = record.items.filter(
+        (item) => {
+            const product = productMap.get(
+                item.productId,
+            )
+
+            const searchableText =
+                normalizeSearch(
+                    [
+                        item.productName,
+                        product?.name ?? '',
+                        product?.sku ?? '',
+                    ].join(' '),
+                )
+
+            return searchableText.includes(query)
+        },
+    )
+
+    if (matchingItems.length === 0) {
+        return null
+    }
+
+    const totalQuantity = matchingItems.reduce(
+        (total, item) =>
+            total + item.quantity,
+        0,
+    )
+
+    const listTotalMinor = matchingItems.reduce(
+        (total, item) =>
+            total +
+            item.quantity *
+            item.listUnitPriceMinor,
+        0,
+    )
+
+    const revenueMinor = matchingItems.reduce(
+        (total, item) =>
+            total +
+            item.quantity *
+            item.actualUnitPriceMinor,
+        0,
+    )
+
+    const discountMinor = matchingItems.reduce(
+        (total, item) => {
+            const difference =
+                item.listUnitPriceMinor -
+                item.actualUnitPriceMinor
+
+            return (
+                total +
+                Math.max(0, difference) *
+                item.quantity
+            )
+        },
+        0,
+    )
+
+    const costMinor = matchingItems.reduce(
+        (total, item) =>
+            total + item.costMinor,
+        0,
+    )
+
+    return {
+        ...record,
+        items: matchingItems,
+        totalQuantity,
+        listTotalMinor,
+        revenueMinor,
+        discountMinor,
+        costMinor,
+        grossProfitMinor:
+            revenueMinor - costMinor,
+    }
+}
+
+function formatCsvMoney(minor: number): string {
+    return (minor / 100)
+        .toFixed(2)
+        .replace('.', ',')
+}
+
+function escapeCsvCell(
+    value: string | number,
+): string {
+    const text = String(value)
+
+    if (
+        text.includes(';') ||
+        text.includes('"') ||
+        text.includes('\n') ||
+        text.includes('\r')
+    ) {
+        return `"${text.replaceAll('"', '""')}"`
+    }
+
+    return text
+}
+
+function createCsvRow(
+    values: Array<string | number>,
+): string {
+    return values
+        .map(escapeCsvCell)
+        .join(';')
+}
+
+function ReportsPage() {
+    const data = useLiveQuery(
+        async () => {
+            const [products, lots, history] =
+                await Promise.all([
+                    productService.getAll(),
+                    inventoryService.getAll(),
+                    salesService.getHistory(),
+                ])
+
+            return {
+                products,
+                lots,
+                history,
+            }
+        },
+        [],
+        {
+            products: [] as Product[],
+            lots: [] as InventoryLot[],
+            history: [] as SaleHistoryRecord[],
+        },
+    )
+
+    const [period, setPeriod] =
+        useState<ReportPeriod>('month')
+
+    const monthRange = useMemo(
+        () => getMonthRange(),
+        [],
+    )
+
+    const [customStartDate, setCustomStartDate] =
+        useState(monthRange.start)
+
+    const [customEndDate, setCustomEndDate] =
+        useState(monthRange.end)
+
+    const [productSearch, setProductSearch] =
+        useState('')
+
+    const productMap = useMemo(
+        () =>
+            new Map(
+                data.products.map((product) => [
+                    product.id,
+                    product,
+                ]),
+            ),
+        [data.products],
+    )
+
+    const reportRange = useMemo(() => {
+        switch (period) {
+            case 'today': {
+                const today = getTodayDateValue()
+
+                return {
+                    start: today,
+                    end: today,
+                }
+            }
+
+            case 'week':
+                return getWeekRange()
+
+            case 'month':
+                return getMonthRange()
+
+            case 'year':
+                return getYearRange()
+
+            case 'custom':
+                return {
+                    start: customStartDate,
+                    end: customEndDate,
+                }
+        }
+    }, [
+        period,
+        customStartDate,
+        customEndDate,
+    ])
+
+    const filteredHistory = useMemo(() => {
+        const query = normalizeSearch(
+            productSearch,
+        )
+
+        return data.history
+            .filter(
+                (record) =>
+                    record.sale.saleDate >=
+                    reportRange.start &&
+                    record.sale.saleDate <=
+                    reportRange.end,
+            )
+            .map((record) =>
+                filterRecordItems(
+                    record,
+                    query,
+                    productMap,
+                ),
+            )
+            .filter(
+                (
+                    record,
+                ): record is SaleHistoryRecord =>
+                    record !== null,
+            )
+    }, [
+        data.history,
+        reportRange,
+        productSearch,
+        productMap,
+    ])
+
+    const completedRecords =
+        filteredHistory.filter(
+            (record) =>
+                record.sale.status === 'completed',
+        )
+
+    const cancelledRecords =
+        filteredHistory.filter(
+            (record) =>
+                record.sale.status === 'cancelled',
+        )
+
+    const totalQuantity =
+        completedRecords.reduce(
+            (total, record) =>
+                total + record.totalQuantity,
+            0,
+        )
+
+    const totalRevenueMinor =
+        completedRecords.reduce(
+            (total, record) =>
+                total + record.revenueMinor,
+            0,
+        )
+
+    const totalCostMinor =
+        completedRecords.reduce(
+            (total, record) =>
+                total + record.costMinor,
+            0,
+        )
+
+    const totalGrossProfitMinor =
+        completedRecords.reduce(
+            (total, record) =>
+                total + record.grossProfitMinor,
+            0,
+        )
+
+    const totalDiscountMinor =
+        completedRecords.reduce(
+            (total, record) =>
+                total + record.discountMinor,
+            0,
+        )
+
+    const averageUnitPriceMinor =
+        totalQuantity > 0
+            ? Math.round(
+                totalRevenueMinor /
+                totalQuantity,
+            )
+            : 0
+
+    const grossMarginPercent =
+        totalRevenueMinor > 0
+            ? (
+                (totalGrossProfitMinor /
+                    totalRevenueMinor) *
+                100
+            ).toFixed(1)
+            : '0,0'
+
+    const currentInventoryValueMinor =
+        data.lots.reduce(
+            (total, lot) =>
+                total +
+                lot.quantityRemaining *
+                lot.unitCostMinor,
+            0,
+        )
+
+    const productRows = new Map<
+        string,
+        ProductReportRow
+    >()
+
+    for (const record of completedRecords) {
+        for (const item of record.items) {
+            const product =
+                productMap.get(item.productId)
+
+            const current =
+                productRows.get(item.productId) ?? {
+                    productId: item.productId,
+
+                    productName:
+                        product?.name ??
+                        item.productName,
+
+                    sku: product?.sku,
+
+                    quantity: 0,
+                    transactionCount: 0,
+
+                    revenueMinor: 0,
+                    costMinor: 0,
+                    grossProfitMinor: 0,
+                    discountMinor: 0,
+                }
+
+            current.quantity += item.quantity
+            current.transactionCount += 1
+
+            const itemRevenue =
+                item.quantity *
+                item.actualUnitPriceMinor
+
+            const itemDiscount =
+                Math.max(
+                    0,
+                    item.listUnitPriceMinor -
+                    item.actualUnitPriceMinor,
+                ) * item.quantity
+
+            current.revenueMinor += itemRevenue
+            current.costMinor += item.costMinor
+
+            current.grossProfitMinor +=
+                itemRevenue - item.costMinor
+
+            current.discountMinor +=
+                itemDiscount
+
+            productRows.set(
+                item.productId,
+                current,
+            )
+        }
+    }
+
+    const productPerformance =
+        Array.from(productRows.values()).sort(
+            (first, second) =>
+                second.grossProfitMinor -
+                first.grossProfitMinor,
+        )
+
+    const dailyRows = new Map<
+        string,
+        DailyReportRow
+    >()
+
+    for (const record of completedRecords) {
+        const current =
+            dailyRows.get(
+                record.sale.saleDate,
+            ) ?? {
+                saleDate:
+                    record.sale.saleDate,
+
+                quantity: 0,
+                transactionCount: 0,
+
+                revenueMinor: 0,
+                costMinor: 0,
+                grossProfitMinor: 0,
+                discountMinor: 0,
+            }
+
+        current.quantity +=
+            record.totalQuantity
+
+        current.transactionCount += 1
+
+        current.revenueMinor +=
+            record.revenueMinor
+
+        current.costMinor +=
+            record.costMinor
+
+        current.grossProfitMinor +=
+            record.grossProfitMinor
+
+        current.discountMinor +=
+            record.discountMinor
+
+        dailyRows.set(
+            record.sale.saleDate,
+            current,
+        )
+    }
+
+    const dailyPerformance =
+        Array.from(dailyRows.values()).sort(
+            (first, second) =>
+                second.saleDate.localeCompare(
+                    first.saleDate,
+                ),
+        )
+
+    const bestSeller =
+        [...productPerformance].sort(
+            (first, second) =>
+                second.quantity -
+                first.quantity,
+        )[0]
+
+    const highestRevenueProduct =
+        [...productPerformance].sort(
+            (first, second) =>
+                second.revenueMinor -
+                first.revenueMinor,
+        )[0]
+
+    const mostProfitableProduct =
+        [...productPerformance].sort(
+            (first, second) =>
+                second.grossProfitMinor -
+                first.grossProfitMinor,
+        )[0]
+
+    const canExportCsv =
+        completedRecords.length > 0
+
+    function handleExportCsv() {
+        if (!canExportCsv) {
+            return
+        }
+
+        const rows: Array<
+            Array<string | number>
+        > = [
+                [
+                    'Tarih',
+                    'Satış ID',
+                    'Ürün',
+                    'SKU',
+                    'Adet',
+                    'Liste Birim Fiyatı',
+                    'Satış Birim Fiyatı',
+                    'Liste Toplamı',
+                    'Ciro',
+                    'İndirim',
+                    'FIFO Maliyeti',
+                    'Brüt Kâr',
+                    'Brüt Kâr Marjı (%)',
+                    'İndirim Nedeni',
+                    'Satış Notu',
+                ],
+            ]
+
+        for (const record of completedRecords) {
+            for (const item of record.items) {
+                const product =
+                    productMap.get(item.productId)
+
+                const listTotalMinor =
+                    item.quantity *
+                    item.listUnitPriceMinor
+
+                const revenueMinor =
+                    item.quantity *
+                    item.actualUnitPriceMinor
+
+                const discountMinor =
+                    Math.max(
+                        0,
+                        item.listUnitPriceMinor -
+                        item.actualUnitPriceMinor,
+                    ) * item.quantity
+
+                const grossProfitMinor =
+                    revenueMinor -
+                    item.costMinor
+
+                const grossMarginPercent =
+                    revenueMinor > 0
+                        ? (
+                            (grossProfitMinor /
+                                revenueMinor) *
+                            100
+                        )
+                            .toFixed(1)
+                            .replace('.', ',')
+                        : '0,0'
+
+                rows.push([
+                    formatDisplayDate(
+                        record.sale.saleDate,
+                    ),
+
+                    record.sale.id,
+
+                    product?.name ??
+                    item.productName,
+
+                    product?.sku ?? '',
+
+                    item.quantity,
+
+                    formatCsvMoney(
+                        item.listUnitPriceMinor,
+                    ),
+
+                    formatCsvMoney(
+                        item.actualUnitPriceMinor,
+                    ),
+
+                    formatCsvMoney(
+                        listTotalMinor,
+                    ),
+
+                    formatCsvMoney(
+                        revenueMinor,
+                    ),
+
+                    formatCsvMoney(
+                        discountMinor,
+                    ),
+
+                    formatCsvMoney(
+                        item.costMinor,
+                    ),
+
+                    formatCsvMoney(
+                        grossProfitMinor,
+                    ),
+
+                    grossMarginPercent,
+
+                    item.discountReason ?? '',
+
+                    record.sale.note ?? '',
+                ])
+            }
+        }
+
+        const csvContent =
+            '\uFEFF' +
+            rows
+                .map(createCsvRow)
+                .join('\r\n')
+
+        const blob = new Blob(
+            [csvContent],
+            {
+                type: 'text/csv;charset=utf-8;',
+            },
+        )
+
+        const objectUrl =
+            URL.createObjectURL(blob)
+
+        const link =
+            document.createElement('a')
+
+        link.href = objectUrl
+
+        link.download =
+            `bazaarflow-satis-raporu_${reportRange.start}_${reportRange.end}.csv`
+
+        document.body.appendChild(link)
+
+        link.click()
+        link.remove()
+
+        URL.revokeObjectURL(objectUrl)
+    }
+
+    return (
+        <div className="dashboard">
+            <header className="page-header">
+                <span className="page-eyebrow">
+                    BazaarFlow
+                </span>
+
+                <h1>Raporlar</h1>
+
+                <p>
+                    Satış, kârlılık ve ürün
+                    performansınızı dönem bazında
+                    analiz edin.
+                </p>
+            </header>
+
+            <section className="reports-toolbar">
+                <div className="reports-period-selector">
+                    {(
+                        [
+                            'today',
+                            'week',
+                            'month',
+                            'year',
+                            'custom',
+                        ] as ReportPeriod[]
+                    ).map((item) => (
+                        <button
+                            key={item}
+                            type="button"
+                            className={`reports-period-button ${period === item
+                                ? 'reports-period-button-active'
+                                : ''
+                                }`}
+                            onClick={() =>
+                                setPeriod(item)
+                            }
+                        >
+                            {getPeriodLabel(item)}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="reports-toolbar-actions">
+                    <label className="reports-search-field">
+                        <Search size={16} />
+
+                        <input
+                            type="search"
+                            value={productSearch}
+                            onChange={(event) =>
+                                setProductSearch(
+                                    event.target.value,
+                                )
+                            }
+                            placeholder="Ürün veya SKU ara..."
+                        />
+                    </label>
+
+                    <button
+                        type="button"
+                        className="reports-export-button"
+                        disabled={!canExportCsv}
+                        onClick={handleExportCsv}
+                    >
+                        <Download size={16} />
+                        CSV İndir
+                    </button>
+                </div>
+            </section>
+
+            {period === 'custom' && (
+                <section className="reports-custom-range">
+                    <label className="history-filter-field">
+                        <span>Başlangıç tarihi</span>
+
+                        <div className="history-filter-control">
+                            <CalendarDays size={16} />
+
+                            <input
+                                type="date"
+                                value={customStartDate}
+                                onChange={(event) =>
+                                    setCustomStartDate(
+                                        event.target.value,
+                                    )
+                                }
+                            />
+                        </div>
+                    </label>
+
+                    <label className="history-filter-field">
+                        <span>Bitiş tarihi</span>
+
+                        <div className="history-filter-control">
+                            <CalendarDays size={16} />
+
+                            <input
+                                type="date"
+                                value={customEndDate}
+                                onChange={(event) =>
+                                    setCustomEndDate(
+                                        event.target.value,
+                                    )
+                                }
+                            />
+                        </div>
+                    </label>
+                </section>
+            )}
+
+            <div className="reports-range-info">
+                {formatDisplayDate(
+                    reportRange.start,
+                )}{' '}
+                —{' '}
+                {formatDisplayDate(
+                    reportRange.end,
+                )}
+            </div>
+
+            <section className="reports-summary-grid">
+                <article className="summary-card">
+                    <span className="summary-card-title">
+                        Ciro
+                    </span>
+
+                    <strong className="summary-card-value">
+                        {formatMoneyFromMinor(
+                            totalRevenueMinor,
+                        )}
+                    </strong>
+
+                    <span className="summary-card-description">
+                        Tamamlanan satışlardan
+                    </span>
+                </article>
+
+                <article className="summary-card">
+                    <span className="summary-card-title">
+                        FIFO Maliyeti
+                    </span>
+
+                    <strong className="summary-card-value">
+                        {formatMoneyFromMinor(
+                            totalCostMinor,
+                        )}
+                    </strong>
+
+                    <span className="summary-card-description">
+                        Satılan ürünlerin maliyeti
+                    </span>
+                </article>
+
+                <article className="summary-card">
+                    <span className="summary-card-title">
+                        Brüt Kâr
+                    </span>
+
+                    <strong className="summary-card-value">
+                        {formatMoneyFromMinor(
+                            totalGrossProfitMinor,
+                        )}
+                    </strong>
+
+                    <span className="summary-card-description">
+                        Marj %{grossMarginPercent}
+                    </span>
+                </article>
+
+                <article className="summary-card">
+                    <span className="summary-card-title">
+                        Satılan Ürün
+                    </span>
+
+                    <strong className="summary-card-value">
+                        {totalQuantity}
+                    </strong>
+
+                    <span className="summary-card-description">
+                        Toplam adet
+                    </span>
+                </article>
+
+                <article className="summary-card">
+                    <span className="summary-card-title">
+                        Satış İşlemi
+                    </span>
+
+                    <strong className="summary-card-value">
+                        {completedRecords.length}
+                    </strong>
+
+                    <span className="summary-card-description">
+                        Tamamlanan işlem
+                    </span>
+                </article>
+
+                <article className="summary-card">
+                    <span className="summary-card-title">
+                        Toplam İndirim
+                    </span>
+
+                    <strong className="summary-card-value">
+                        {formatMoneyFromMinor(
+                            totalDiscountMinor,
+                        )}
+                    </strong>
+
+                    <span className="summary-card-description">
+                        Dönemde verilen indirim
+                    </span>
+                </article>
+
+                <article className="summary-card">
+                    <span className="summary-card-title">
+                        Ortalama Birim Fiyat
+                    </span>
+
+                    <strong className="summary-card-value">
+                        {formatMoneyFromMinor(
+                            averageUnitPriceMinor,
+                        )}
+                    </strong>
+
+                    <span className="summary-card-description">
+                        Ciro / satılan adet
+                    </span>
+                </article>
+
+                <article className="summary-card">
+                    <span className="summary-card-title">
+                        İptal Edilen
+                    </span>
+
+                    <strong className="summary-card-value">
+                        {cancelledRecords.length}
+                    </strong>
+
+                    <span className="summary-card-description">
+                        Toplamlara dahil değil
+                    </span>
+                </article>
+            </section>
+
+            <section className="reports-leader-grid">
+                <article className="reports-leader-card">
+                    <PackageCheck size={20} />
+
+                    <span>En Çok Satan</span>
+
+                    <strong>
+                        {bestSeller
+                            ? bestSeller.productName
+                            : '—'}
+                    </strong>
+
+                    <small>
+                        {bestSeller
+                            ? `${bestSeller.quantity} adet`
+                            : 'Henüz veri yok'}
+                    </small>
+                </article>
+
+                <article className="reports-leader-card">
+                    <WalletCards size={20} />
+
+                    <span>En Çok Ciro</span>
+
+                    <strong>
+                        {highestRevenueProduct
+                            ? highestRevenueProduct.productName
+                            : '—'}
+                    </strong>
+
+                    <small>
+                        {highestRevenueProduct
+                            ? formatMoneyFromMinor(
+                                highestRevenueProduct.revenueMinor,
+                            )
+                            : 'Henüz veri yok'}
+                    </small>
+                </article>
+
+                <article className="reports-leader-card">
+                    <Trophy size={20} />
+
+                    <span>En Kârlı Ürün</span>
+
+                    <strong>
+                        {mostProfitableProduct
+                            ? mostProfitableProduct.productName
+                            : '—'}
+                    </strong>
+
+                    <small>
+                        {mostProfitableProduct
+                            ? formatMoneyFromMinor(
+                                mostProfitableProduct.grossProfitMinor,
+                            )
+                            : 'Henüz veri yok'}
+                    </small>
+                </article>
+
+                <article className="reports-leader-card">
+                    <Warehouse size={20} />
+
+                    <span>Mevcut Stok Değeri</span>
+
+                    <strong>
+                        {formatMoneyFromMinor(
+                            currentInventoryValueMinor,
+                        )}
+                    </strong>
+
+                    <small>
+                        Bugünkü elde kalan stok
+                    </small>
+                </article>
+            </section>
+
+            <section className="dashboard-panel reports-table-panel">
+                <div className="panel-header">
+                    <div>
+                        <h2>Ürün Performansı</h2>
+
+                        <p>
+                            Seçilen dönemde tamamlanan
+                            satışların ürün bazlı analizi.
+                        </p>
+                    </div>
+                </div>
+
+                {productPerformance.length === 0 ? (
+                    <div className="empty-state">
+                        <TrendingUp
+                            size={30}
+                            strokeWidth={1.5}
+                        />
+
+                        <div>
+                            <strong>
+                                Rapor verisi bulunamadı
+                            </strong>
+
+                            <p>
+                                Dönemi veya ürün filtresini
+                                değiştirebilirsiniz.
+                            </p>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="product-table-wrapper">
+                        <table className="product-table reports-table">
+                            <thead>
+                                <tr>
+                                    <th>Ürün</th>
+                                    <th>SKU</th>
+                                    <th>Adet</th>
+                                    <th>Ciro</th>
+                                    <th>Maliyet</th>
+                                    <th>Brüt Kâr</th>
+                                    <th>Marj</th>
+                                    <th>İndirim</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {productPerformance.map(
+                                    (item) => {
+                                        const margin =
+                                            item.revenueMinor > 0
+                                                ? (
+                                                    (item.grossProfitMinor /
+                                                        item.revenueMinor) *
+                                                    100
+                                                ).toFixed(1)
+                                                : '0,0'
+
+                                        return (
+                                            <tr
+                                                key={item.productId}
+                                            >
+                                                <td>
+                                                    <strong>
+                                                        {item.productName}
+                                                    </strong>
+                                                </td>
+
+                                                <td>
+                                                    {item.sku ?? '—'}
+                                                </td>
+
+                                                <td>
+                                                    {item.quantity}
+                                                </td>
+
+                                                <td>
+                                                    {formatMoneyFromMinor(
+                                                        item.revenueMinor,
+                                                    )}
+                                                </td>
+
+                                                <td>
+                                                    {formatMoneyFromMinor(
+                                                        item.costMinor,
+                                                    )}
+                                                </td>
+
+                                                <td>
+                                                    {formatMoneyFromMinor(
+                                                        item.grossProfitMinor,
+                                                    )}
+                                                </td>
+
+                                                <td>
+                                                    %{margin}
+                                                </td>
+
+                                                <td>
+                                                    {formatMoneyFromMinor(
+                                                        item.discountMinor,
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        )
+                                    },
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </section>
+
+            <section className="dashboard-panel reports-table-panel">
+                <div className="panel-header">
+                    <div>
+                        <h2>Günlük Satış Kırılımı</h2>
+
+                        <p>
+                            Seçilen dönemdeki günlük
+                            satış ve kârlılık özeti.
+                        </p>
+                    </div>
+                </div>
+
+                {dailyPerformance.length === 0 ? (
+                    <div className="empty-state">
+                        <CircleDollarSign
+                            size={30}
+                            strokeWidth={1.5}
+                        />
+
+                        <div>
+                            <strong>
+                                Günlük veri bulunamadı
+                            </strong>
+
+                            <p>
+                                Bu dönemde tamamlanan satış
+                                bulunmuyor.
+                            </p>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="product-table-wrapper">
+                        <table className="product-table reports-table">
+                            <thead>
+                                <tr>
+                                    <th>Tarih</th>
+                                    <th>İşlem</th>
+                                    <th>Adet</th>
+                                    <th>Ciro</th>
+                                    <th>Maliyet</th>
+                                    <th>Brüt Kâr</th>
+                                    <th>İndirim</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {dailyPerformance.map(
+                                    (day) => (
+                                        <tr key={day.saleDate}>
+                                            <td>
+                                                <strong>
+                                                    {formatDisplayDate(
+                                                        day.saleDate,
+                                                    )}
+                                                </strong>
+                                            </td>
+
+                                            <td>
+                                                {day.transactionCount}
+                                            </td>
+
+                                            <td>
+                                                {day.quantity}
+                                            </td>
+
+                                            <td>
+                                                {formatMoneyFromMinor(
+                                                    day.revenueMinor,
+                                                )}
+                                            </td>
+
+                                            <td>
+                                                {formatMoneyFromMinor(
+                                                    day.costMinor,
+                                                )}
+                                            </td>
+
+                                            <td>
+                                                {formatMoneyFromMinor(
+                                                    day.grossProfitMinor,
+                                                )}
+                                            </td>
+
+                                            <td>
+                                                {formatMoneyFromMinor(
+                                                    day.discountMinor,
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ),
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </section>
+        </div>
+    )
+}
+
+export default ReportsPage

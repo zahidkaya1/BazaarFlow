@@ -604,15 +604,22 @@ function SalesPage() {
             return
         }
 
+        const fullRecord =
+            saleHistory.find(
+                (candidate) =>
+                    candidate.sale.id ===
+                    record.sale.id,
+            ) ?? record
+
         clearFeedback()
 
-        setEditingSaleId(record.sale.id)
+        setEditingSaleId(fullRecord.sale.id)
 
-        setSaleDate(record.sale.saleDate)
-        setSaleNote(record.sale.note ?? '')
+        setSaleDate(fullRecord.sale.saleDate)
+        setSaleNote(fullRecord.sale.note ?? '')
 
         setDraftItems(
-            record.items.map((item) => ({
+            fullRecord.items.map((item) => ({
                 productId: item.productId,
                 productName: item.productName,
 
