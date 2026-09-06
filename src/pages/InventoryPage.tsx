@@ -1,6 +1,11 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Boxes, PackagePlus } from 'lucide-react'
+import {
+    AlertTriangle,
+    Boxes,
+    PackagePlus,
+    Search,
+} from 'lucide-react'
 import { inventoryService } from '../services/inventoryService'
 import { productService } from '../services/productService'
 import type {
@@ -37,6 +42,12 @@ function getEntryTypeLabel(
         : 'Stok Alımı'
 }
 
+function normalizeSearch(value: string): string {
+    return value
+        .trim()
+        .toLocaleLowerCase('tr-TR')
+}
+
 function InventoryPage() {
     const data = useLiveQuery(
         async () => {
@@ -64,24 +75,48 @@ function InventoryPage() {
         useState<InventoryEntryType>('purchase')
 
     const [productId, setProductId] = useState('')
+
     const [purchaseDate, setPurchaseDate] = useState(
         getTodayDateValue(),
     )
-    const [quantityReceived, setQuantityReceived] = useState('')
+
+    const [quantityReceived, setQuantityReceived] =
+        useState('')
+
     const [unitCost, setUnitCost] = useState('')
     const [note, setNote] = useState('')
+
+    const [stockSearch, setStockSearch] = useState('')
+    const [historySearch, setHistorySearch] = useState('')
+
+    const [
+        showPassiveProducts,
+        setShowPassiveProducts,
+    ] = useState(false)
+
+    const [
+        showZeroStockProducts,
+        setShowZeroStockProducts,
+    ] = useState(false)
 
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
 
-    const activeProducts = products.filter(
-        (product) => product.isActive,
+    const activeProducts = useMemo(
+        () =>
+            products.filter(
+                (product) => product.isActive,
+            ),
+        [products],
     )
 
     const productMap = useMemo(
         () =>
             new Map(
-                products.map((product) => [product.id, product]),
+                products.map((product) => [
+                    product.id,
+                    product,
+                ]),
             ),
         [products],
     )
@@ -100,16 +135,159 @@ function InventoryPage() {
         return stock
     }, [lots])
 
+    const stockValueByProduct = useMemo(() => {
+        const values = new Map<string, number>()
+
+        for (const lot of lots) {
+            const remainingValue =
+                lot.quantityRemaining *
+                lot.unitCostMinor
+
+            values.set(
+                lot.productId,
+                (values.get(lot.productId) ?? 0) +
+                remainingValue,
+            )
+        }
+
+        return values
+    }, [lots])
+
     const totalQuantity = lots.reduce(
-        (total, lot) => total + lot.quantityRemaining,
+        (total, lot) =>
+            total + lot.quantityRemaining,
         0,
     )
 
-    const totalInventoryValueMinor = lots.reduce(
-        (total, lot) =>
-            total + lot.quantityRemaining * lot.unitCostMinor,
-        0,
+    const totalInventoryValueMinor =
+        lots.reduce(
+            (total, lot) =>
+                total +
+                lot.quantityRemaining *
+                lot.unitCostMinor,
+            0,
+        )
+
+    const lowStockProducts = useMemo(
+        () =>
+            products.filter((product) => {
+                if (!product.isActive) {
+                    return false
+                }
+
+                if (product.minimumStock <= 0) {
+                    return false
+                }
+
+                const currentStock =
+                    stockByProduct.get(product.id) ?? 0
+
+                return (
+                    currentStock <= product.minimumStock
+                )
+            }),
+        [products, stockByProduct],
     )
+
+    const activeStockedProductCount =
+        activeProducts.filter(
+            (product) =>
+                (stockByProduct.get(product.id) ?? 0) >
+                0,
+        ).length
+
+    const filteredProducts = useMemo(() => {
+        const query = normalizeSearch(stockSearch)
+
+        return products
+            .filter((product) => {
+                if (
+                    !showPassiveProducts &&
+                    !product.isActive
+                ) {
+                    return false
+                }
+
+                const currentStock =
+                    stockByProduct.get(product.id) ?? 0
+
+                if (
+                    !showZeroStockProducts &&
+                    currentStock <= 0
+                ) {
+                    return false
+                }
+
+                if (!query) {
+                    return true
+                }
+
+                const searchableText = normalizeSearch(
+                    `${product.name} ${product.sku ?? ''}`,
+                )
+
+                return searchableText.includes(query)
+            })
+            .sort((first, second) => {
+                const firstStock =
+                    stockByProduct.get(first.id) ?? 0
+
+                const secondStock =
+                    stockByProduct.get(second.id) ?? 0
+
+                const firstIsLow =
+                    first.isActive &&
+                    first.minimumStock > 0 &&
+                    firstStock <= first.minimumStock
+
+                const secondIsLow =
+                    second.isActive &&
+                    second.minimumStock > 0 &&
+                    secondStock <= second.minimumStock
+
+                if (firstIsLow !== secondIsLow) {
+                    return firstIsLow ? -1 : 1
+                }
+
+                return first.name.localeCompare(
+                    second.name,
+                    'tr',
+                )
+            })
+    }, [
+        products,
+        stockByProduct,
+        stockSearch,
+        showPassiveProducts,
+        showZeroStockProducts,
+    ])
+
+    const filteredLots = useMemo(() => {
+        const query = normalizeSearch(historySearch)
+
+        if (!query) {
+            return lots
+        }
+
+        return lots.filter((lot) => {
+            const product = productMap.get(
+                lot.productId,
+            )
+
+            const searchableText =
+                normalizeSearch(
+                    [
+                        product?.name ?? '',
+                        product?.sku ?? '',
+                        lot.note ?? '',
+                        lot.purchaseDate,
+                        getEntryTypeLabel(lot.entryType),
+                    ].join(' '),
+                )
+
+            return searchableText.includes(query)
+        })
+    }, [lots, productMap, historySearch])
 
     async function handleSubmit(
         event: FormEvent<HTMLFormElement>,
@@ -120,15 +298,21 @@ function InventoryPage() {
         setError('')
 
         try {
-            const quantity = Number(quantityReceived)
+            const quantity = Number(
+                quantityReceived,
+            )
 
-            if (!Number.isSafeInteger(quantity) || quantity <= 0) {
+            if (
+                !Number.isSafeInteger(quantity) ||
+                quantity <= 0
+            ) {
                 throw new Error(
                     'Stok adedi sıfırdan büyük tam sayı olmalıdır.',
                 )
             }
 
-            const unitCostMinor = parseMoneyToMinor(unitCost)
+            const unitCostMinor =
+                parseMoneyToMinor(unitCost)
 
             await inventoryService.create({
                 productId,
@@ -160,11 +344,16 @@ function InventoryPage() {
     return (
         <div className="dashboard">
             <header className="page-header">
-                <span className="page-eyebrow">BazaarFlow</span>
+                <span className="page-eyebrow">
+                    BazaarFlow
+                </span>
+
                 <h1>Stok</h1>
+
                 <p>
-                    Stok alımlarını ve mevcut eski stoklarınızı parti bazında
-                    kaydedin.
+                    Stok alımlarını, açılış
+                    stoklarını ve eldeki ürünleri
+                    parti bazında yönetin.
                 </p>
             </header>
 
@@ -184,7 +373,10 @@ function InventoryPage() {
                 <article className="summary-card">
                     <div className="summary-card-header">
                         <span className="summary-card-icon">
-                            <Boxes size={21} strokeWidth={1.8} />
+                            <Boxes
+                                size={21}
+                                strokeWidth={1.8}
+                            />
                         </span>
 
                         <span className="summary-card-title">
@@ -204,7 +396,10 @@ function InventoryPage() {
                 <article className="summary-card">
                     <div className="summary-card-header">
                         <span className="summary-card-icon">
-                            <PackagePlus size={21} strokeWidth={1.8} />
+                            <PackagePlus
+                                size={21}
+                                strokeWidth={1.8}
+                            />
                         </span>
 
                         <span className="summary-card-title">
@@ -213,11 +408,66 @@ function InventoryPage() {
                     </div>
 
                     <strong className="summary-card-value">
-                        {formatMoneyFromMinor(totalInventoryValueMinor)}
+                        {formatMoneyFromMinor(
+                            totalInventoryValueMinor,
+                        )}
                     </strong>
 
                     <span className="summary-card-description">
-                        Eldeki ürünlerin toplam alış maliyeti
+                        Eldeki ürünlerin toplam alış
+                        maliyeti
+                    </span>
+                </article>
+
+                <article className="summary-card">
+                    <div className="summary-card-header">
+                        <span
+                            className={`summary-card-icon ${lowStockProducts.length > 0
+                                ? 'summary-card-icon-warning'
+                                : ''
+                                }`}
+                        >
+                            <AlertTriangle
+                                size={21}
+                                strokeWidth={1.8}
+                            />
+                        </span>
+
+                        <span className="summary-card-title">
+                            Düşük Stok
+                        </span>
+                    </div>
+
+                    <strong className="summary-card-value">
+                        {lowStockProducts.length}
+                    </strong>
+
+                    <span className="summary-card-description">
+                        Minimum seviyeye ulaşan aktif
+                        ürün
+                    </span>
+                </article>
+
+                <article className="summary-card">
+                    <div className="summary-card-header">
+                        <span className="summary-card-icon">
+                            <Boxes
+                                size={21}
+                                strokeWidth={1.8}
+                            />
+                        </span>
+
+                        <span className="summary-card-title">
+                            Stokta Ürün
+                        </span>
+                    </div>
+
+                    <strong className="summary-card-value">
+                        {activeStockedProductCount}
+                    </strong>
+
+                    <span className="summary-card-description">
+                        Stoğu bulunan aktif ürün çeşidi
                     </span>
                 </article>
             </section>
@@ -227,8 +477,10 @@ function InventoryPage() {
                     <div className="panel-header">
                         <div>
                             <h2>Stok Girişi</h2>
+
                             <p>
-                                Normal alım veya uygulama öncesinden kalan açılış
+                                Normal alım veya uygulama
+                                öncesinden kalan açılış
                                 stoku ekleyin.
                             </p>
                         </div>
@@ -245,7 +497,8 @@ function InventoryPage() {
                                 value={entryType}
                                 onChange={(event) =>
                                     setEntryType(
-                                        event.target.value as InventoryEntryType,
+                                        event.target
+                                            .value as InventoryEntryType,
                                     )
                                 }
                             >
@@ -261,9 +514,10 @@ function InventoryPage() {
 
                         {entryType === 'opening' && (
                             <div className="inventory-info-box">
-                                Açılış stoku, BazaarFlow'u kullanmaya başlamadan
-                                önce elinizde bulunan ürünleri sisteme aktarmak
-                                içindir.
+                                Açılış stoku, BazaarFlow'u
+                                kullanmaya başlamadan önce
+                                elinizde bulunan ürünleri
+                                sisteme aktarmak içindir.
                             </div>
                         )}
 
@@ -273,20 +527,29 @@ function InventoryPage() {
                             <select
                                 value={productId}
                                 onChange={(event) =>
-                                    setProductId(event.target.value)
+                                    setProductId(
+                                        event.target.value,
+                                    )
                                 }
                                 required
                             >
-                                <option value="">Ürün seçin</option>
+                                <option value="">
+                                    Ürün seçin
+                                </option>
 
-                                {activeProducts.map((product) => (
-                                    <option
-                                        key={product.id}
-                                        value={product.id}
-                                    >
-                                        {product.name}
-                                    </option>
-                                ))}
+                                {activeProducts.map(
+                                    (product) => (
+                                        <option
+                                            key={product.id}
+                                            value={product.id}
+                                        >
+                                            {product.name}
+                                            {product.sku
+                                                ? ` · ${product.sku}`
+                                                : ''}
+                                        </option>
+                                    ),
+                                )}
                             </select>
                         </label>
 
@@ -301,7 +564,9 @@ function InventoryPage() {
                                 type="date"
                                 value={purchaseDate}
                                 onChange={(event) =>
-                                    setPurchaseDate(event.target.value)
+                                    setPurchaseDate(
+                                        event.target.value,
+                                    )
                                 }
                                 required
                             />
@@ -321,7 +586,9 @@ function InventoryPage() {
                                     step="1"
                                     value={quantityReceived}
                                     onChange={(event) =>
-                                        setQuantityReceived(event.target.value)
+                                        setQuantityReceived(
+                                            event.target.value,
+                                        )
                                     }
                                     placeholder="Örn. 30"
                                     required
@@ -336,7 +603,9 @@ function InventoryPage() {
                                     inputMode="decimal"
                                     value={unitCost}
                                     onChange={(event) =>
-                                        setUnitCost(event.target.value)
+                                        setUnitCost(
+                                            event.target.value,
+                                        )
                                     }
                                     placeholder="Örn. 35,00"
                                     required
@@ -357,7 +626,10 @@ function InventoryPage() {
                             />
                         </label>
 
-                        <button className="primary-button" type="submit">
+                        <button
+                            className="primary-button"
+                            type="submit"
+                        >
                             <PackagePlus size={18} />
 
                             {entryType === 'opening'
@@ -371,69 +643,245 @@ function InventoryPage() {
                     <div className="panel-header">
                         <div>
                             <h2>Mevcut Stoklar</h2>
+
                             <p>
-                                Ürün bazında elde kalan toplam stok miktarı.
+                                Ürün bazında stok, maliyet
+                                ve minimum stok seviyeleri.
                             </p>
+                        </div>
+                    </div>
+
+                    <div className="inventory-stock-toolbar">
+                        <label className="inventory-search-field">
+                            <Search size={16} />
+
+                            <input
+                                type="search"
+                                value={stockSearch}
+                                onChange={(event) =>
+                                    setStockSearch(
+                                        event.target.value,
+                                    )
+                                }
+                                placeholder="Ürün veya SKU ara..."
+                            />
+                        </label>
+
+                        <div className="inventory-filter-options">
+                            <label className="inventory-filter-option">
+                                <input
+                                    type="checkbox"
+                                    checked={
+                                        showPassiveProducts
+                                    }
+                                    onChange={(event) =>
+                                        setShowPassiveProducts(
+                                            event.target.checked,
+                                        )
+                                    }
+                                />
+
+                                <span>
+                                    Pasif ürünleri göster
+                                </span>
+                            </label>
+
+                            <label className="inventory-filter-option">
+                                <input
+                                    type="checkbox"
+                                    checked={
+                                        showZeroStockProducts
+                                    }
+                                    onChange={(event) =>
+                                        setShowZeroStockProducts(
+                                            event.target.checked,
+                                        )
+                                    }
+                                />
+
+                                <span>
+                                    Sıfır stokları göster
+                                </span>
+                            </label>
                         </div>
                     </div>
 
                     {products.length === 0 ? (
                         <div className="empty-state empty-state-compact">
                             <div>
-                                <strong>Henüz ürün bulunmuyor</strong>
+                                <strong>
+                                    Henüz ürün bulunmuyor
+                                </strong>
+
                                 <p>
-                                    Stok eklemek için önce bir ürün oluşturun.
+                                    Stok eklemek için önce bir
+                                    ürün oluşturun.
                                 </p>
                             </div>
                         </div>
+                    ) : filteredProducts.length === 0 ? (
+                        <div className="inventory-filter-empty">
+                            <strong>
+                                Filtreye uygun ürün bulunamadı
+                            </strong>
+
+                            <span>
+                                Arama veya görünürlük
+                                filtrelerini değiştirebilirsiniz.
+                            </span>
+                        </div>
                     ) : (
                         <div className="stock-list">
-                            {products.map((product) => (
-                                <div
-                                    key={product.id}
-                                    className="stock-list-item"
-                                >
-                                    <div>
-                                        <strong>{product.name}</strong>
+                            {filteredProducts.map(
+                                (product) => {
+                                    const currentStock =
+                                        stockByProduct.get(
+                                            product.id,
+                                        ) ?? 0
 
-                                        {!product.isActive && (
-                                            <span className="stock-product-passive">
-                                                Pasif
-                                            </span>
-                                        )}
-                                    </div>
+                                    const stockValueMinor =
+                                        stockValueByProduct.get(
+                                            product.id,
+                                        ) ?? 0
 
-                                    <span className="stock-quantity">
-                                        {stockByProduct.get(product.id) ?? 0} adet
-                                    </span>
-                                </div>
-                            ))}
+                                    const isLowStock =
+                                        product.isActive &&
+                                        product.minimumStock > 0 &&
+                                        currentStock <=
+                                        product.minimumStock
+
+                                    return (
+                                        <div
+                                            key={product.id}
+                                            className={`stock-list-item stock-list-item-detailed ${isLowStock
+                                                ? 'stock-list-item-low'
+                                                : ''
+                                                }`}
+                                        >
+                                            <div className="stock-product-details">
+                                                <div className="stock-product-title-row">
+                                                    <strong>
+                                                        {product.name}
+                                                    </strong>
+
+                                                    {product.sku && (
+                                                        <span className="stock-product-sku">
+                                                            {product.sku}
+                                                        </span>
+                                                    )}
+
+                                                    {!product.isActive && (
+                                                        <span className="stock-product-passive">
+                                                            Pasif
+                                                        </span>
+                                                    )}
+
+                                                    {isLowStock && (
+                                                        <span className="stock-low-badge">
+                                                            <AlertTriangle
+                                                                size={12}
+                                                            />
+                                                            Düşük Stok
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <div className="stock-product-meta">
+                                                    <span>
+                                                        Minimum stok:{' '}
+                                                        <strong>
+                                                            {
+                                                                product.minimumStock
+                                                            }
+                                                        </strong>
+                                                    </span>
+
+                                                    <span>
+                                                        Stok değeri:{' '}
+                                                        <strong>
+                                                            {formatMoneyFromMinor(
+                                                                stockValueMinor,
+                                                            )}
+                                                        </strong>
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="stock-product-quantity">
+                                                <strong>
+                                                    {currentStock}
+                                                </strong>
+
+                                                <span>adet</span>
+                                            </div>
+                                        </div>
+                                    )
+                                },
+                            )}
                         </div>
                     )}
                 </article>
             </section>
 
             <section className="dashboard-panel inventory-lots-panel">
-                <div className="panel-header">
+                <div className="panel-header inventory-history-header">
                     <div>
                         <h2>Stok Geçmişi</h2>
-                        <p>{lots.length} stok kaydı bulunuyor.</p>
+
+                        <p>
+                            {filteredLots.length} /{' '}
+                            {lots.length} stok kaydı
+                            gösteriliyor.
+                        </p>
                     </div>
+
+                    <label className="inventory-search-field inventory-history-search">
+                        <Search size={16} />
+
+                        <input
+                            type="search"
+                            value={historySearch}
+                            onChange={(event) =>
+                                setHistorySearch(
+                                    event.target.value,
+                                )
+                            }
+                            placeholder="Geçmişte ara..."
+                        />
+                    </label>
                 </div>
 
                 {lots.length === 0 ? (
                     <div className="empty-state">
                         <div className="empty-state-icon">
-                            <PackagePlus size={30} strokeWidth={1.5} />
+                            <PackagePlus
+                                size={30}
+                                strokeWidth={1.5}
+                            />
                         </div>
 
                         <div>
-                            <strong>Henüz stok kaydı yok</strong>
+                            <strong>
+                                Henüz stok kaydı yok
+                            </strong>
+
                             <p>
-                                Normal stok alımı veya açılış stoku
+                                Normal stok alımı veya
+                                açılış stoku
                                 oluşturabilirsiniz.
                             </p>
                         </div>
+                    </div>
+                ) : filteredLots.length === 0 ? (
+                    <div className="inventory-filter-empty">
+                        <strong>
+                            Aramayla eşleşen stok kaydı yok
+                        </strong>
+
+                        <span>
+                            Ürün adı, SKU, not veya tarih
+                            ile arayabilirsiniz.
+                        </span>
                     </div>
                 ) : (
                     <div className="product-table-wrapper">
@@ -452,45 +900,76 @@ function InventoryPage() {
                             </thead>
 
                             <tbody>
-                                {lots.map((lot) => (
-                                    <tr key={lot.id}>
-                                        <td>
-                                            <span
-                                                className={`inventory-type-badge ${lot.entryType === 'opening'
-                                                    ? 'inventory-type-opening'
-                                                    : 'inventory-type-purchase'
-                                                    }`}
-                                            >
-                                                {getEntryTypeLabel(lot.entryType)}
-                                            </span>
-                                        </td>
+                                {filteredLots.map((lot) => {
+                                    const product =
+                                        productMap.get(
+                                            lot.productId,
+                                        )
 
-                                        <td>{formatDate(lot.purchaseDate)}</td>
+                                    return (
+                                        <tr key={lot.id}>
+                                            <td>
+                                                <span
+                                                    className={`inventory-type-badge ${lot.entryType ===
+                                                        'opening'
+                                                        ? 'inventory-type-opening'
+                                                        : 'inventory-type-purchase'
+                                                        }`}
+                                                >
+                                                    {getEntryTypeLabel(
+                                                        lot.entryType,
+                                                    )}
+                                                </span>
+                                            </td>
 
-                                        <td>
-                                            <strong>
-                                                {productMap.get(lot.productId)?.name ??
-                                                    'Bilinmeyen ürün'}
-                                            </strong>
-                                        </td>
+                                            <td>
+                                                {formatDate(
+                                                    lot.purchaseDate,
+                                                )}
+                                            </td>
 
-                                        <td>{lot.quantityReceived}</td>
-                                        <td>{lot.quantityRemaining}</td>
+                                            <td>
+                                                <div className="inventory-history-product">
+                                                    <strong>
+                                                        {product?.name ??
+                                                            'Bilinmeyen ürün'}
+                                                    </strong>
 
-                                        <td>
-                                            {formatMoneyFromMinor(lot.unitCostMinor)}
-                                        </td>
+                                                    {product?.sku && (
+                                                        <span>
+                                                            {product.sku}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
 
-                                        <td>
-                                            {formatMoneyFromMinor(
-                                                lot.quantityRemaining *
-                                                lot.unitCostMinor,
-                                            )}
-                                        </td>
+                                            <td>
+                                                {lot.quantityReceived}
+                                            </td>
 
-                                        <td>{lot.note ?? '—'}</td>
-                                    </tr>
-                                ))}
+                                            <td>
+                                                {lot.quantityRemaining}
+                                            </td>
+
+                                            <td>
+                                                {formatMoneyFromMinor(
+                                                    lot.unitCostMinor,
+                                                )}
+                                            </td>
+
+                                            <td>
+                                                {formatMoneyFromMinor(
+                                                    lot.quantityRemaining *
+                                                    lot.unitCostMinor,
+                                                )}
+                                            </td>
+
+                                            <td>
+                                                {lot.note ?? '—'}
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
                             </tbody>
                         </table>
                     </div>

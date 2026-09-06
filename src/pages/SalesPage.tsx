@@ -7,6 +7,7 @@ import {
     Pencil,
     Plus,
     Save,
+    Search,
     ShoppingCart,
     Trash2,
     X,
@@ -33,6 +34,80 @@ type DraftSaleItem = {
     listUnitPriceMinor: number
     actualUnitPriceMinor: number
     discountReason?: string
+}
+
+type SaleHistoryStatusFilter =
+    | 'all'
+    | 'completed'
+    | 'cancelled'
+
+function normalizeSearch(value: string): string {
+    return value
+        .trim()
+        .toLocaleLowerCase('tr-TR')
+}
+
+function rebuildFilteredHistoryRecord(
+    record: SaleHistoryRecord,
+    items: SaleHistoryRecord['items'],
+): SaleHistoryRecord {
+    const totalQuantity = items.reduce(
+        (total, item) => total + item.quantity,
+        0,
+    )
+
+    const listTotalMinor = items.reduce(
+        (total, item) =>
+            total +
+            item.quantity *
+            item.listUnitPriceMinor,
+        0,
+    )
+
+    const revenueMinor = items.reduce(
+        (total, item) =>
+            total +
+            item.quantity *
+            item.actualUnitPriceMinor,
+        0,
+    )
+
+    const discountMinor = items.reduce(
+        (total, item) => {
+            const difference =
+                item.listUnitPriceMinor -
+                item.actualUnitPriceMinor
+
+            return (
+                total +
+                Math.max(0, difference) *
+                item.quantity
+            )
+        },
+        0,
+    )
+
+    const costMinor = items.reduce(
+        (total, item) =>
+            total + item.costMinor,
+        0,
+    )
+
+    return {
+        ...record,
+        items,
+
+        totalQuantity,
+
+        listTotalMinor,
+        revenueMinor,
+        discountMinor,
+
+        costMinor,
+
+        grossProfitMinor:
+            revenueMinor - costMinor,
+    }
 }
 
 function getTodayDateValue(): string {
@@ -64,16 +139,40 @@ function SalesPage() {
         [] as SaleHistoryRecord[],
     )
 
-    const [historyDateFilter, setHistoryDateFilter] = useState('')
+    const [historyStartDate, setHistoryStartDate] =
+        useState('')
+
+    const [historyEndDate, setHistoryEndDate] =
+        useState('')
+
+    const [historySearch, setHistorySearch] =
+        useState('')
+
+    const [historyStatus, setHistoryStatus] =
+        useState<SaleHistoryStatusFilter>('all')
 
     const [editingSaleId, setEditingSaleId] = useState<
         string | null
     >(null)
 
-    const activeProducts = products.filter(
-        (product) => product.isActive,
+    const activeProducts = useMemo(
+        () =>
+            products.filter(
+                (product) => product.isActive,
+            ),
+        [products],
     )
 
+    const productMap = useMemo(
+        () =>
+            new Map(
+                products.map((product) => [
+                    product.id,
+                    product,
+                ]),
+            ),
+        [products],
+    )
     const [saleDate, setSaleDate] = useState(
         getTodayDateValue(),
     )
@@ -95,15 +194,80 @@ function SalesPage() {
     const [error, setError] = useState('')
 
     const filteredSaleHistory = useMemo(() => {
-        if (!historyDateFilter) {
-            return saleHistory
-        }
+        const query = normalizeSearch(historySearch)
 
-        return saleHistory.filter(
-            (record) =>
-                record.sale.saleDate === historyDateFilter,
-        )
-    }, [saleHistory, historyDateFilter])
+        return saleHistory
+            .filter((record) => {
+                if (
+                    historyStartDate &&
+                    record.sale.saleDate < historyStartDate
+                ) {
+                    return false
+                }
+
+                if (
+                    historyEndDate &&
+                    record.sale.saleDate > historyEndDate
+                ) {
+                    return false
+                }
+
+                if (
+                    historyStatus !== 'all' &&
+                    record.sale.status !== historyStatus
+                ) {
+                    return false
+                }
+
+                return true
+            })
+            .map((record) => {
+                if (!query) {
+                    return record
+                }
+
+                const matchingItems =
+                    record.items.filter((item) => {
+                        const currentProduct =
+                            productMap.get(item.productId)
+
+                        const searchableText =
+                            normalizeSearch(
+                                [
+                                    item.productName,
+                                    currentProduct?.name ?? '',
+                                    currentProduct?.sku ?? '',
+                                ].join(' '),
+                            )
+
+                        return searchableText.includes(
+                            query,
+                        )
+                    })
+
+                if (matchingItems.length === 0) {
+                    return null
+                }
+
+                return rebuildFilteredHistoryRecord(
+                    record,
+                    matchingItems,
+                )
+            })
+            .filter(
+                (
+                    record,
+                ): record is SaleHistoryRecord =>
+                    record !== null,
+            )
+    }, [
+        saleHistory,
+        productMap,
+        historyStartDate,
+        historyEndDate,
+        historySearch,
+        historyStatus,
+    ])
 
     const completedHistory = filteredSaleHistory.filter(
         (record) => record.sale.status === 'completed',
@@ -183,6 +347,19 @@ function SalesPage() {
     function clearFeedback() {
         setMessage('')
         setError('')
+    }
+
+    const hasHistoryFilters =
+        historyStartDate !== '' ||
+        historyEndDate !== '' ||
+        historySearch.trim() !== '' ||
+        historyStatus !== 'all'
+
+    function clearHistoryFilters() {
+        setHistoryStartDate('')
+        setHistoryEndDate('')
+        setHistorySearch('')
+        setHistoryStatus('all')
     }
 
     function invalidatePreview() {
@@ -269,6 +446,143 @@ function SalesPage() {
                     : 'Ürün satış listesine eklenemedi.',
             )
         }
+    }
+
+    function updateDraftItemProduct(
+        itemIndex: number,
+        nextProductId: string,
+    ) {
+        clearFeedback()
+
+        const nextProduct = products.find(
+            (product) => product.id === nextProductId,
+        )
+
+        if (!nextProduct) {
+            setError('Seçilen ürün bulunamadı.')
+            return
+        }
+
+        const duplicateProduct = draftItems.some(
+            (item, index) =>
+                index !== itemIndex &&
+                item.productId === nextProductId,
+        )
+
+        if (duplicateProduct) {
+            setError(
+                'Aynı ürün bir satışta yalnızca bir kez bulunabilir.',
+            )
+            return
+        }
+
+        setDraftItems((current) =>
+            current.map((item, index) =>
+                index === itemIndex
+                    ? {
+                        ...item,
+                        productId: nextProduct.id,
+                        productName: nextProduct.name,
+                        listUnitPriceMinor:
+                            nextProduct.defaultSalePriceMinor,
+                        actualUnitPriceMinor:
+                            nextProduct.defaultSalePriceMinor,
+                        discountReason: undefined,
+                    }
+                    : item,
+            ),
+        )
+
+        invalidatePreview()
+    }
+
+    function updateDraftItemQuantity(
+        itemIndex: number,
+        value: string,
+    ) {
+        clearFeedback()
+
+        const parsedQuantity = Number(value)
+
+        if (
+            !Number.isSafeInteger(parsedQuantity) ||
+            parsedQuantity < 0
+        ) {
+            return
+        }
+
+        setDraftItems((current) =>
+            current.map((item, index) =>
+                index === itemIndex
+                    ? {
+                        ...item,
+                        quantity: parsedQuantity,
+                    }
+                    : item,
+            ),
+        )
+
+        invalidatePreview()
+    }
+
+    function updateDraftItemPrice(
+        itemIndex: number,
+        value: string,
+    ) {
+        clearFeedback()
+
+        if (value.trim() === '') {
+            setDraftItems((current) =>
+                current.map((item, index) =>
+                    index === itemIndex
+                        ? {
+                            ...item,
+                            actualUnitPriceMinor: 0,
+                        }
+                        : item,
+                ),
+            )
+
+            invalidatePreview()
+            return
+        }
+
+        try {
+            const priceMinor = parseMoneyToMinor(value)
+
+            setDraftItems((current) =>
+                current.map((item, index) =>
+                    index === itemIndex
+                        ? {
+                            ...item,
+                            actualUnitPriceMinor: priceMinor,
+                        }
+                        : item,
+                ),
+            )
+
+            invalidatePreview()
+        } catch {
+            // Kullanıcı fiyatı yazmayı tamamlayana kadar
+            // geçersiz ara değerleri kaydetmiyoruz.
+        }
+    }
+
+    function updateDraftItemDiscountReason(
+        itemIndex: number,
+        value: string,
+    ) {
+        setDraftItems((current) =>
+            current.map((item, index) =>
+                index === itemIndex
+                    ? {
+                        ...item,
+                        discountReason:
+                            value.trim() || undefined,
+                    }
+                    : item,
+            ),
+        )
     }
 
     function removeItem(productIdToRemove: string) {
@@ -813,11 +1127,16 @@ function SalesPage() {
                 <article className="dashboard-panel">
                     <div className="panel-header">
                         <div>
-                            <h2>Satış Listesi</h2>
+                            <h2>
+                                {editingSaleId
+                                    ? 'Düzenlenen Satış'
+                                    : 'Satış Listesi'}
+                            </h2>
 
                             <p>
-                                {draftItems.length} farklı
-                                ürün.
+                                {editingSaleId
+                                    ? 'Ürün, adet, satış fiyatı ve indirim nedenini doğrudan değiştirebilirsiniz.'
+                                    : `${draftItems.length} farklı ürün.`}
                             </p>
                         </div>
                     </div>
@@ -859,111 +1178,190 @@ function SalesPage() {
                                 </thead>
 
                                 <tbody>
-                                    {draftItems.map(
-                                        (item, index) => {
-                                            const itemRevenue =
-                                                item.quantity *
-                                                item.actualUnitPriceMinor
+                                    {draftItems.map((item, index) => {
+                                        const itemRevenue =
+                                            item.quantity *
+                                            item.actualUnitPriceMinor
 
-                                            const itemDiscount =
-                                                Math.max(
-                                                    0,
-                                                    item.listUnitPriceMinor -
-                                                    item.actualUnitPriceMinor,
-                                                ) * item.quantity
+                                        const itemDiscount =
+                                            Math.max(
+                                                0,
+                                                item.listUnitPriceMinor -
+                                                item.actualUnitPriceMinor,
+                                            ) * item.quantity
 
-                                            const itemCost =
-                                                preview?.items[index]
-                                                    ?.totalCostMinor ??
-                                                null
+                                        const itemCost =
+                                            preview?.items[index]?.totalCostMinor ??
+                                            null
 
-                                            const itemProfit =
-                                                itemCost === null
-                                                    ? null
-                                                    : itemRevenue -
-                                                    itemCost
+                                        const itemProfit =
+                                            itemCost === null
+                                                ? null
+                                                : itemRevenue - itemCost
 
-                                            return (
-                                                <tr
-                                                    key={
-                                                        item.productId
-                                                    }
-                                                >
-                                                    <td>
-                                                        <strong>
-                                                            {
-                                                                item.productName
-                                                            }
-                                                        </strong>
-
-                                                        {item.discountReason && (
-                                                            <span className="sale-item-reason">
-                                                                {
-                                                                    item.discountReason
+                                        return (
+                                            <tr key={`${item.productId}-${index}`}>
+                                                <td>
+                                                    {editingSaleId ? (
+                                                        <div className="sale-inline-product">
+                                                            <select
+                                                                className="sale-inline-select"
+                                                                value={item.productId}
+                                                                onChange={(event) =>
+                                                                    updateDraftItemProduct(
+                                                                        index,
+                                                                        event.target.value,
+                                                                    )
                                                                 }
-                                                            </span>
-                                                        )}
-                                                    </td>
+                                                            >
+                                                                {products
+                                                                    .filter(
+                                                                        (product) =>
+                                                                            product.isActive ||
+                                                                            product.id ===
+                                                                            item.productId,
+                                                                    )
+                                                                    .map((product) => (
+                                                                        <option
+                                                                            key={product.id}
+                                                                            value={product.id}
+                                                                        >
+                                                                            {product.name}
+                                                                            {!product.isActive
+                                                                                ? ' (Pasif)'
+                                                                                : ''}
+                                                                        </option>
+                                                                    ))}
+                                                            </select>
 
-                                                    <td>
-                                                        {item.quantity}
-                                                    </td>
+                                                            <input
+                                                                className="sale-inline-reason"
+                                                                type="text"
+                                                                value={
+                                                                    item.discountReason ?? ''
+                                                                }
+                                                                onChange={(event) =>
+                                                                    updateDraftItemDiscountReason(
+                                                                        index,
+                                                                        event.target.value,
+                                                                    )
+                                                                }
+                                                                placeholder="İndirim nedeni"
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <strong>
+                                                                {item.productName}
+                                                            </strong>
 
-                                                    <td>
-                                                        {formatMoneyFromMinor(
-                                                            item.listUnitPriceMinor,
-                                                        )}
-                                                    </td>
-
-                                                    <td>
-                                                        {formatMoneyFromMinor(
-                                                            item.actualUnitPriceMinor,
-                                                        )}
-                                                    </td>
-
-                                                    <td>
-                                                        {formatMoneyFromMinor(
-                                                            itemDiscount,
-                                                        )}
-                                                    </td>
-
-                                                    <td>
-                                                        {itemCost === null
-                                                            ? '—'
-                                                            : formatMoneyFromMinor(
-                                                                itemCost,
+                                                            {item.discountReason && (
+                                                                <span className="sale-item-reason">
+                                                                    {item.discountReason}
+                                                                </span>
                                                             )}
-                                                    </td>
+                                                        </>
+                                                    )}
+                                                </td>
 
-                                                    <td>
-                                                        {itemProfit === null
-                                                            ? '—'
-                                                            : formatMoneyFromMinor(
-                                                                itemProfit,
-                                                            )}
-                                                    </td>
-
-                                                    <td>
-                                                        <button
-                                                            type="button"
-                                                            className="action-button"
-                                                            onClick={() =>
-                                                                removeItem(
-                                                                    item.productId,
+                                                <td>
+                                                    {editingSaleId ? (
+                                                        <input
+                                                            className="sale-inline-quantity"
+                                                            type="number"
+                                                            min="1"
+                                                            step="1"
+                                                            value={item.quantity}
+                                                            onChange={(event) =>
+                                                                updateDraftItemQuantity(
+                                                                    index,
+                                                                    event.target.value,
                                                                 )
                                                             }
-                                                            aria-label={`${item.productName} ürününü satıştan çıkar`}
-                                                        >
-                                                            <Trash2
-                                                                size={15}
-                                                            />
-                                                            Çıkar
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            )
-                                        },
-                                    )}
+                                                            aria-label={`${item.productName} satış adedi`}
+                                                        />
+                                                    ) : (
+                                                        item.quantity
+                                                    )}
+                                                </td>
+
+                                                <td>
+                                                    {formatMoneyFromMinor(
+                                                        item.listUnitPriceMinor,
+                                                    )}
+                                                </td>
+
+                                                <td>
+                                                    {editingSaleId ? (
+                                                        <input
+                                                            className="sale-inline-price"
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            value={
+                                                                item.actualUnitPriceMinor /
+                                                                100
+                                                            }
+                                                            onChange={(event) =>
+                                                                updateDraftItemPrice(
+                                                                    index,
+                                                                    event.target.value,
+                                                                )
+                                                            }
+                                                            aria-label={`${item.productName} satış fiyatı`}
+                                                        />
+                                                    ) : (
+                                                        formatMoneyFromMinor(
+                                                            item.actualUnitPriceMinor,
+                                                        )
+                                                    )}
+                                                </td>
+
+                                                <td>
+                                                    {formatMoneyFromMinor(
+                                                        itemDiscount,
+                                                    )}
+                                                </td>
+
+                                                <td>
+                                                    {itemCost === null
+                                                        ? '—'
+                                                        : formatMoneyFromMinor(
+                                                            itemCost,
+                                                        )}
+                                                </td>
+
+                                                <td>
+                                                    {itemProfit === null
+                                                        ? '—'
+                                                        : formatMoneyFromMinor(
+                                                            itemProfit,
+                                                        )}
+                                                </td>
+
+                                                <td>
+                                                    <button
+                                                        type="button"
+                                                        className={
+                                                            editingSaleId
+                                                                ? 'action-button action-button-danger'
+                                                                : 'action-button'
+                                                        }
+                                                        onClick={() =>
+                                                            removeItem(item.productId)
+                                                        }
+                                                        aria-label={`${item.productName} ürününü satıştan çıkar`}
+                                                    >
+                                                        <Trash2 size={15} />
+
+                                                        {editingSaleId
+                                                            ? 'Satırı Sil'
+                                                            : 'Çıkar'}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
                                 </tbody>
                             </table>
                         </div>
@@ -1029,39 +1427,103 @@ function SalesPage() {
                         <h2>Satış Geçmişi</h2>
 
                         <p>
-                            Günlük ve geçmiş tarihli satış
-                            kayıtlarınızı inceleyin.
+                            Tarih, ürün ve satış durumuna göre
+                            geçmiş kayıtları inceleyin.
                         </p>
                     </div>
 
-                    <label className="history-date-filter">
-                        <span>Tarih filtresi</span>
+                    {hasHistoryFilters && (
+                        <button
+                            type="button"
+                            className="secondary-button"
+                            onClick={clearHistoryFilters}
+                        >
+                            Filtreleri Temizle
+                        </button>
+                    )}
+                </div>
 
-                        <div className="history-date-input">
-                            <CalendarDays size={17} />
+                <div className="sales-history-filters">
+                    <label className="history-filter-field">
+                        <span>Başlangıç tarihi</span>
+
+                        <div className="history-filter-control">
+                            <CalendarDays size={16} />
 
                             <input
                                 type="date"
-                                value={historyDateFilter}
+                                value={historyStartDate}
                                 onChange={(event) =>
-                                    setHistoryDateFilter(
+                                    setHistoryStartDate(
                                         event.target.value,
                                     )
                                 }
                             />
                         </div>
+                    </label>
 
-                        {historyDateFilter && (
-                            <button
-                                type="button"
-                                className="history-clear-button"
-                                onClick={() =>
-                                    setHistoryDateFilter('')
+                    <label className="history-filter-field">
+                        <span>Bitiş tarihi</span>
+
+                        <div className="history-filter-control">
+                            <CalendarDays size={16} />
+
+                            <input
+                                type="date"
+                                value={historyEndDate}
+                                onChange={(event) =>
+                                    setHistoryEndDate(
+                                        event.target.value,
+                                    )
                                 }
-                            >
-                                Tüm günleri göster
-                            </button>
-                        )}
+                            />
+                        </div>
+                    </label>
+
+                    <label className="history-filter-field history-search-field">
+                        <span>Ürün / SKU ara</span>
+
+                        <div className="history-filter-control">
+                            <Search size={16} />
+
+                            <input
+                                type="search"
+                                value={historySearch}
+                                onChange={(event) =>
+                                    setHistorySearch(
+                                        event.target.value,
+                                    )
+                                }
+                                placeholder="Örn. Sade Şal veya SAD-001"
+                            />
+                        </div>
+                    </label>
+
+                    <label className="history-filter-field">
+                        <span>Durum</span>
+
+                        <select
+                            className="history-status-select"
+                            value={historyStatus}
+                            onChange={(event) =>
+                                setHistoryStatus(
+                                    event.target
+                                        .value as SaleHistoryStatusFilter,
+                                )
+                            }
+                        >
+                            <option value="all">
+                                Tüm satışlar
+                            </option>
+
+                            <option value="completed">
+                                Tamamlandı
+                            </option>
+
+                            <option value="cancelled">
+                                İptal Edildi
+                            </option>
+                        </select>
                     </label>
                 </div>
 
@@ -1141,12 +1603,12 @@ function SalesPage() {
 
                             <div>
                                 <strong>
-                                    Satış kaydı bulunamadı
+                                    Filtreye uygun satış bulunamadı
                                 </strong>
 
                                 <p>
-                                    Seçilen tarihte henüz bir
-                                    satış kaydı yok.
+                                    Tarih, ürün veya durum filtrelerini
+                                    değiştirerek tekrar deneyin.
                                 </p>
                             </div>
                         </div>
