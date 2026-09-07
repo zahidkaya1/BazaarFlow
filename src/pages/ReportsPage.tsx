@@ -22,6 +22,7 @@ import {
     Tooltip,
     XAxis,
     YAxis,
+    type MouseHandlerDataParam,
 } from 'recharts'
 import { inventoryService } from '../services/inventoryService'
 import { productService } from '../services/productService'
@@ -67,9 +68,26 @@ type DailyReportRow = {
 }
 
 type TrendChartPoint = {
+    key: string
     label: string
+    detailLabel: string
+    quantity: number
+    transactionCount: number
     revenueMinor: number
+    costMinor: number
     grossProfitMinor: number
+    discountMinor: number
+}
+
+type ProductChartPoint = ProductReportRow
+
+type ChartTooltipPayloadEntry = {
+    payload?: unknown
+}
+
+type ChartTooltipProps = {
+    active?: boolean
+    payload?: readonly ChartTooltipPayloadEntry[]
 }
 
 function formatDateValue(date: Date): string {
@@ -102,6 +120,356 @@ function formatChartProductName(
     }
 
     return `${value.slice(0, 14)}…`
+}
+
+function formatProfitMargin(
+    revenueMinor: number,
+    grossProfitMinor: number,
+): string {
+    if (revenueMinor <= 0) {
+        return '%0,0'
+    }
+
+    const margin =
+        (grossProfitMinor / revenueMinor) * 100
+
+    return `%${margin.toLocaleString(
+        'tr-TR',
+        {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+        },
+    )}`
+}
+
+function renderMetricGrid(
+    values: Array<{
+        label: string
+        value: string
+    }>,
+) {
+    return (
+        <div
+            style={{
+                display: 'grid',
+                gridTemplateColumns:
+                    'repeat(2, minmax(0, 1fr))',
+                gap: 8,
+                marginTop: 10,
+            }}
+        >
+            {values.map((item) => (
+                <div
+                    key={item.label}
+                    style={{
+                        padding: '8px 10px',
+                        border:
+                            '1px solid var(--color-border)',
+                        borderRadius: 8,
+                        background:
+                            'var(--color-surface)',
+                    }}
+                >
+                    <span
+                        style={{
+                            display: 'block',
+                            marginBottom: 3,
+                            color:
+                                'var(--color-text-muted)',
+                            fontSize: 11,
+                        }}
+                    >
+                        {item.label}
+                    </span>
+
+                    <strong
+                        style={{
+                            display: 'block',
+                            color:
+                                'var(--color-text)',
+                            fontSize: 13,
+                        }}
+                    >
+                        {item.value}
+                    </strong>
+                </div>
+            ))}
+        </div>
+    )
+}
+
+function renderTooltipMetricGrid(
+    values: Array<{
+        label: string
+        value: string
+    }>,
+) {
+    return (
+        <div
+            style={{
+                display: 'grid',
+                gridTemplateColumns:
+                    'repeat(2, minmax(0, 1fr))',
+                gap: 8,
+                marginTop: 10,
+            }}
+        >
+            {values.map((item) => (
+                <div
+                    key={item.label}
+                    style={{
+                        padding: '8px 10px',
+                        border:
+                            '1px solid #e2e8f0',
+                        borderRadius: 8,
+                        background:
+                            '#f8fafc',
+                    }}
+                >
+                    <span
+                        style={{
+                            display: 'block',
+                            marginBottom: 3,
+                            color:
+                                '#64748b',
+                            fontSize: 11,
+                        }}
+                    >
+                        {item.label}
+                    </span>
+
+                    <strong
+                        style={{
+                            display: 'block',
+                            color:
+                                '#0f172a',
+                            fontSize: 13,
+                        }}
+                    >
+                        {item.value}
+                    </strong>
+                </div>
+            ))}
+        </div>
+    )
+}
+
+function TrendChartTooltip({
+    active,
+    payload,
+}: ChartTooltipProps) {
+    const point =
+        payload?.[0]?.payload as
+        | TrendChartPoint
+        | undefined
+
+    if (!active || !point) {
+        return null
+    }
+
+    return (
+        <div
+            style={{
+                minWidth: 230,
+                padding: 12,
+                border:
+                    '1px solid #cbd5e1',
+                borderRadius: 12,
+                background:
+                    '#ffffff',
+                boxShadow:
+                    '0 16px 40px rgba(15, 23, 42, 0.22)',
+                position: 'relative',
+                zIndex: 1000,
+                opacity: 1,
+            }}
+        >
+            <strong
+                style={{
+                    display: 'block',
+                    marginBottom: 2,
+                    color:
+                        '#0f172a',
+                }}
+            >
+                {point.detailLabel}
+            </strong>
+
+            <small
+                style={{
+                    color:
+                        '#64748b',
+                }}
+            >
+                Detayı sabitlemek için grafiğe tıklayın.
+            </small>
+
+            {renderTooltipMetricGrid([
+                {
+                    label: 'İşlem',
+                    value:
+                        `${point.transactionCount}`,
+                },
+                {
+                    label: 'Satılan',
+                    value:
+                        `${point.quantity} adet`,
+                },
+                {
+                    label: 'Ciro',
+                    value:
+                        formatMoneyFromMinor(
+                            point.revenueMinor,
+                        ),
+                },
+                {
+                    label: 'Maliyet',
+                    value:
+                        formatMoneyFromMinor(
+                            point.costMinor,
+                        ),
+                },
+                {
+                    label: 'Brüt Kâr',
+                    value:
+                        formatMoneyFromMinor(
+                            point.grossProfitMinor,
+                        ),
+                },
+                {
+                    label: 'Kâr Marjı',
+                    value:
+                        formatProfitMargin(
+                            point.revenueMinor,
+                            point.grossProfitMinor,
+                        ),
+                },
+                {
+                    label: 'İndirim',
+                    value:
+                        formatMoneyFromMinor(
+                            point.discountMinor,
+                        ),
+                },
+            ])}
+        </div>
+    )
+}
+
+function ProductChartTooltip({
+    active,
+    payload,
+}: ChartTooltipProps) {
+    const point =
+        payload?.[0]?.payload as
+        | ProductChartPoint
+        | undefined
+
+    if (!active || !point) {
+        return null
+    }
+
+    return (
+        <div
+            style={{
+                minWidth: 240,
+                padding: 12,
+                border:
+                    '1px solid #cbd5e1',
+                borderRadius: 12,
+                background:
+                    '#ffffff',
+                boxShadow:
+                    '0 16px 40px rgba(15, 23, 42, 0.22)',
+                position: 'relative',
+                zIndex: 1000,
+                opacity: 1,
+            }}
+        >
+            <strong
+                style={{
+                    display: 'block',
+                    color:
+                        '#0f172a',
+                }}
+            >
+                {point.productName}
+            </strong>
+
+            <small
+                style={{
+                    display: 'block',
+                    marginTop: 2,
+                    color:
+                        '#64748b',
+                }}
+            >
+                {point.sku
+                    ? `SKU: ${point.sku}`
+                    : 'SKU yok'}
+            </small>
+
+            <small
+                style={{
+                    display: 'block',
+                    marginTop: 4,
+                    color:
+                        '#64748b',
+                }}
+            >
+                Detayı sabitlemek için ürüne tıklayın.
+            </small>
+
+            {renderTooltipMetricGrid([
+                {
+                    label: 'İşlem',
+                    value:
+                        `${point.transactionCount}`,
+                },
+                {
+                    label: 'Satılan',
+                    value:
+                        `${point.quantity} adet`,
+                },
+                {
+                    label: 'Ciro',
+                    value:
+                        formatMoneyFromMinor(
+                            point.revenueMinor,
+                        ),
+                },
+                {
+                    label: 'Maliyet',
+                    value:
+                        formatMoneyFromMinor(
+                            point.costMinor,
+                        ),
+                },
+                {
+                    label: 'Brüt Kâr',
+                    value:
+                        formatMoneyFromMinor(
+                            point.grossProfitMinor,
+                        ),
+                },
+                {
+                    label: 'Kâr Marjı',
+                    value:
+                        formatProfitMargin(
+                            point.revenueMinor,
+                            point.grossProfitMinor,
+                        ),
+                },
+                {
+                    label: 'İndirim',
+                    value:
+                        formatMoneyFromMinor(
+                            point.discountMinor,
+                        ),
+                },
+            ])}
+        </div>
+    )
 }
 
 function renderChartLegend() {
@@ -198,25 +566,45 @@ function sumDailyRows(
     dailyRows: Map<string, DailyReportRow>,
     dateValues: string[],
 ): {
+    quantity: number
+    transactionCount: number
     revenueMinor: number
+    costMinor: number
     grossProfitMinor: number
+    discountMinor: number
 } {
     return dateValues.reduce(
         (totals, dateValue) => {
             const row =
                 dailyRows.get(dateValue)
 
+            totals.quantity +=
+                row?.quantity ?? 0
+
+            totals.transactionCount +=
+                row?.transactionCount ?? 0
+
             totals.revenueMinor +=
                 row?.revenueMinor ?? 0
+
+            totals.costMinor +=
+                row?.costMinor ?? 0
 
             totals.grossProfitMinor +=
                 row?.grossProfitMinor ?? 0
 
+            totals.discountMinor +=
+                row?.discountMinor ?? 0
+
             return totals
         },
         {
+            quantity: 0,
+            transactionCount: 0,
             revenueMinor: 0,
+            costMinor: 0,
             grossProfitMinor: 0,
+            discountMinor: 0,
         },
     )
 }
@@ -255,14 +643,27 @@ function createDailyTrendData(
             dailyRows.get(saleDate)
 
         return {
+            key: saleDate,
             label:
                 formatShortDisplayDate(
                     saleDate,
                 ),
+            detailLabel:
+                formatDisplayDate(
+                    saleDate,
+                ),
+            quantity:
+                day?.quantity ?? 0,
+            transactionCount:
+                day?.transactionCount ?? 0,
             revenueMinor:
                 day?.revenueMinor ?? 0,
+            costMinor:
+                day?.costMinor ?? 0,
             grossProfitMinor:
                 day?.grossProfitMinor ?? 0,
+            discountMinor:
+                day?.discountMinor ?? 0,
         }
     })
 }
@@ -327,12 +728,24 @@ function createMonthlyWeekTrendData(
             )
 
         points.push({
+            key:
+                `${firstDate}:${lastDate}`,
             label:
                 `${firstDay}–${lastDay} ${monthLabel}`,
+            detailLabel:
+                `${firstDay}–${lastDay} ${monthLabel} ${firstDate.slice(0, 4)}`,
+            quantity:
+                totals.quantity,
+            transactionCount:
+                totals.transactionCount,
             revenueMinor:
                 totals.revenueMinor,
+            costMinor:
+                totals.costMinor,
             grossProfitMinor:
                 totals.grossProfitMinor,
+            discountMinor:
+                totals.discountMinor,
         })
     }
 
@@ -382,15 +795,34 @@ function createYearlyMonthTrendData(
                     ),
                 )
 
+            const monthKey =
+                `${year}-${String(month).padStart(
+                    2,
+                    '0',
+                )}`
+
             return {
+                key: monthKey,
                 label:
                     getMonthShortLabel(
                         month,
                     ),
+                detailLabel:
+                    `${getMonthShortLabel(
+                        month,
+                    )} ${year}`,
+                quantity:
+                    totals.quantity,
+                transactionCount:
+                    totals.transactionCount,
                 revenueMinor:
                     totals.revenueMinor,
+                costMinor:
+                    totals.costMinor,
                 grossProfitMinor:
                     totals.grossProfitMinor,
+                discountMinor:
+                    totals.discountMinor,
             }
         },
     )
@@ -647,6 +1079,16 @@ function ReportsPage() {
 
     const [dailyChartMode, setDailyChartMode] =
         useState<DailyChartMode>('bar')
+
+    const [
+        selectedTrendKey,
+        setSelectedTrendKey,
+    ] = useState<string | null>(null)
+
+    const [
+        selectedProductId,
+        setSelectedProductId,
+    ] = useState<string | null>(null)
 
     const effectiveDailyChartMode: DailyChartMode =
         period === 'today'
@@ -982,7 +1424,7 @@ function ReportsPage() {
             ? 4
             : 0
 
-    const productChartData =
+    const productChartData: ProductChartPoint[] =
         [...productPerformance]
             .sort(
                 (first, second) =>
@@ -990,15 +1432,19 @@ function ReportsPage() {
                     first.revenueMinor,
             )
             .slice(0, 6)
-            .map((item) => ({
-                productId: item.productId,
-                productName:
-                    item.productName,
-                revenueMinor:
-                    item.revenueMinor,
-                grossProfitMinor:
-                    item.grossProfitMinor,
-            }))
+
+    const selectedTrendDetail =
+        dailyChartData.find(
+            (item) =>
+                item.key === selectedTrendKey,
+        ) ?? null
+
+    const selectedProductDetail =
+        productChartData.find(
+            (item) =>
+                item.productId ===
+                selectedProductId,
+        ) ?? null
 
     const bestSeller =
         [...productPerformance].sort(
@@ -1020,6 +1466,66 @@ function ReportsPage() {
                 second.grossProfitMinor -
                 first.grossProfitMinor,
         )[0]
+
+    function handleTrendChartClick(
+        eventData: MouseHandlerDataParam,
+    ) {
+        const index =
+            Number(
+                eventData.activeTooltipIndex,
+            )
+
+        if (
+            !Number.isInteger(index) ||
+            index < 0
+        ) {
+            return
+        }
+
+        const point =
+            dailyChartData[index]
+
+        if (!point) {
+            return
+        }
+
+        setSelectedTrendKey(
+            (current) =>
+                current === point.key
+                    ? null
+                    : point.key,
+        )
+    }
+
+    function handleProductChartClick(
+        eventData: MouseHandlerDataParam,
+    ) {
+        const index =
+            Number(
+                eventData.activeTooltipIndex,
+            )
+
+        if (
+            !Number.isInteger(index) ||
+            index < 0
+        ) {
+            return
+        }
+
+        const point =
+            productChartData[index]
+
+        if (!point) {
+            return
+        }
+
+        setSelectedProductId(
+            (current) =>
+                current === point.productId
+                    ? null
+                    : point.productId,
+        )
+    }
 
     const canExportCsv =
         completedRecords.length > 0
@@ -1639,6 +2145,9 @@ function ReportsPage() {
                                 {effectiveDailyChartMode === 'bar' ? (
                                     <BarChart
                                         data={dailyChartData}
+                                        onClick={
+                                            handleTrendChartClick
+                                        }
                                         margin={{
                                             top: 8,
                                             right: 12,
@@ -1683,37 +2192,20 @@ function ReportsPage() {
                                         />
 
                                         <Tooltip
-                                            labelFormatter={(label) =>
-                                                String(label)
+                                            cursor={{
+                                                fill:
+                                                    'rgba(15, 23, 42, 0.035)',
+                                            }}
+                                            wrapperStyle={{
+                                                zIndex: 1000,
+                                                pointerEvents:
+                                                    'none',
+                                                outline:
+                                                    'none',
+                                            }}
+                                            content={
+                                                <TrendChartTooltip />
                                             }
-                                            formatter={(
-                                                value,
-                                                name,
-                                            ) => [
-                                                    formatMoneyFromMinor(
-                                                        Number(value),
-                                                    ),
-                                                    String(name),
-                                                ]}
-                                            contentStyle={{
-                                                background:
-                                                    'var(--color-surface)',
-                                                border:
-                                                    '1px solid var(--color-border)',
-                                                borderRadius:
-                                                    '10px',
-                                                boxShadow:
-                                                    '0 8px 24px rgba(15, 23, 42, 0.12)',
-                                            }}
-                                            labelStyle={{
-                                                color:
-                                                    'var(--color-text)',
-                                                fontWeight: 600,
-                                            }}
-                                            itemStyle={{
-                                                color:
-                                                    'var(--color-text)',
-                                            }}
                                         />
 
                                         <Legend
@@ -1724,6 +2216,7 @@ function ReportsPage() {
 
                                         <Bar
                                             dataKey="revenueMinor"
+                                            cursor="pointer"
                                             name="Ciro"
                                             fill="var(--color-secondary)"
                                             radius={[
@@ -1739,6 +2232,7 @@ function ReportsPage() {
 
                                         <Bar
                                             dataKey="grossProfitMinor"
+                                            cursor="pointer"
                                             name="Brüt Kâr"
                                             fill="var(--color-primary)"
                                             radius={[
@@ -1755,6 +2249,9 @@ function ReportsPage() {
                                 ) : (
                                     <LineChart
                                         data={dailyChartData}
+                                        onClick={
+                                            handleTrendChartClick
+                                        }
                                         margin={{
                                             top: 8,
                                             right: 12,
@@ -1795,37 +2292,22 @@ function ReportsPage() {
                                         />
 
                                         <Tooltip
-                                            labelFormatter={(label) =>
-                                                String(label)
+                                            cursor={{
+                                                stroke:
+                                                    'rgba(15, 23, 42, 0.20)',
+                                                strokeDasharray:
+                                                    '4 4',
+                                            }}
+                                            wrapperStyle={{
+                                                zIndex: 1000,
+                                                pointerEvents:
+                                                    'none',
+                                                outline:
+                                                    'none',
+                                            }}
+                                            content={
+                                                <TrendChartTooltip />
                                             }
-                                            formatter={(
-                                                value,
-                                                name,
-                                            ) => [
-                                                    formatMoneyFromMinor(
-                                                        Number(value),
-                                                    ),
-                                                    String(name),
-                                                ]}
-                                            contentStyle={{
-                                                background:
-                                                    'var(--color-surface)',
-                                                border:
-                                                    '1px solid var(--color-border)',
-                                                borderRadius:
-                                                    '10px',
-                                                boxShadow:
-                                                    '0 8px 24px rgba(15, 23, 42, 0.12)',
-                                            }}
-                                            labelStyle={{
-                                                color:
-                                                    'var(--color-text)',
-                                                fontWeight: 600,
-                                            }}
-                                            itemStyle={{
-                                                color:
-                                                    'var(--color-text)',
-                                            }}
                                         />
 
                                         <Legend
@@ -1837,6 +2319,7 @@ function ReportsPage() {
                                         <Line
                                             type="monotone"
                                             dataKey="revenueMinor"
+                                            cursor="pointer"
                                             name="Ciro"
                                             stroke="var(--color-secondary)"
                                             strokeWidth={2}
@@ -1851,6 +2334,7 @@ function ReportsPage() {
                                         <Line
                                             type="monotone"
                                             dataKey="grossProfitMinor"
+                                            cursor="pointer"
                                             name="Brüt Kâr"
                                             stroke="var(--color-primary)"
                                             strokeWidth={2}
@@ -1864,6 +2348,136 @@ function ReportsPage() {
                                     </LineChart>
                                 )}
                             </ResponsiveContainer>
+                        </div>
+                    )}
+
+                    {selectedTrendDetail && (
+                        <div
+                            style={{
+                                marginTop: 14,
+                                padding: 14,
+                                border:
+                                    '1px solid var(--color-border)',
+                                borderRadius: 12,
+                                background:
+                                    'var(--color-surface)',
+                            }}
+                        >
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    alignItems:
+                                        'flex-start',
+                                    justifyContent:
+                                        'space-between',
+                                    gap: 12,
+                                }}
+                            >
+                                <div>
+                                    <strong
+                                        style={{
+                                            display:
+                                                'block',
+                                            color:
+                                                'var(--color-text)',
+                                        }}
+                                    >
+                                        {selectedTrendDetail.detailLabel}
+                                    </strong>
+
+                                    <small
+                                        style={{
+                                            color:
+                                                'var(--color-text-muted)',
+                                        }}
+                                    >
+                                        Seçilen dönem detayı
+                                    </small>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setSelectedTrendKey(
+                                            null,
+                                        )
+                                    }
+                                    style={{
+                                        border:
+                                            '1px solid var(--color-border)',
+                                        borderRadius: 8,
+                                        padding:
+                                            '5px 9px',
+                                        cursor:
+                                            'pointer',
+                                        background:
+                                            'transparent',
+                                        color:
+                                            'var(--color-text-muted)',
+                                        font:
+                                            'inherit',
+                                        fontSize: 12,
+                                    }}
+                                >
+                                    Kapat
+                                </button>
+                            </div>
+
+                            {renderMetricGrid([
+                                {
+                                    label:
+                                        'İşlem',
+                                    value:
+                                        `${selectedTrendDetail.transactionCount}`,
+                                },
+                                {
+                                    label:
+                                        'Satılan',
+                                    value:
+                                        `${selectedTrendDetail.quantity} adet`,
+                                },
+                                {
+                                    label:
+                                        'Ciro',
+                                    value:
+                                        formatMoneyFromMinor(
+                                            selectedTrendDetail.revenueMinor,
+                                        ),
+                                },
+                                {
+                                    label:
+                                        'Maliyet',
+                                    value:
+                                        formatMoneyFromMinor(
+                                            selectedTrendDetail.costMinor,
+                                        ),
+                                },
+                                {
+                                    label:
+                                        'Brüt Kâr',
+                                    value:
+                                        formatMoneyFromMinor(
+                                            selectedTrendDetail.grossProfitMinor,
+                                        ),
+                                },
+                                {
+                                    label:
+                                        'Kâr Marjı',
+                                    value:
+                                        formatProfitMargin(
+                                            selectedTrendDetail.revenueMinor,
+                                            selectedTrendDetail.grossProfitMinor,
+                                        ),
+                                },
+                                {
+                                    label:
+                                        'İndirim',
+                                    value:
+                                        formatMoneyFromMinor(
+                                            selectedTrendDetail.discountMinor,
+                                        ),
+                                },
+                            ])}
                         </div>
                     )}
                 </article>
@@ -1910,6 +2524,9 @@ function ReportsPage() {
                             >
                                 <BarChart
                                     data={productChartData}
+                                    onClick={
+                                        handleProductChartClick
+                                    }
                                     margin={{
                                         top: 8,
                                         right: 12,
@@ -1951,34 +2568,20 @@ function ReportsPage() {
                                     />
 
                                     <Tooltip
-                                        formatter={(
-                                            value,
-                                            name,
-                                        ) => [
-                                                formatMoneyFromMinor(
-                                                    Number(value),
-                                                ),
-                                                String(name),
-                                            ]}
-                                        contentStyle={{
-                                            background:
-                                                'var(--color-surface)',
-                                            border:
-                                                '1px solid var(--color-border)',
-                                            borderRadius:
-                                                '10px',
-                                            boxShadow:
-                                                '0 8px 24px rgba(15, 23, 42, 0.12)',
+                                        cursor={{
+                                            fill:
+                                                'rgba(15, 23, 42, 0.035)',
                                         }}
-                                        labelStyle={{
-                                            color:
-                                                'var(--color-text)',
-                                            fontWeight: 600,
+                                        wrapperStyle={{
+                                            zIndex: 1000,
+                                            pointerEvents:
+                                                'none',
+                                            outline:
+                                                'none',
                                         }}
-                                        itemStyle={{
-                                            color:
-                                                'var(--color-text)',
-                                        }}
+                                        content={
+                                            <ProductChartTooltip />
+                                        }
                                     />
 
                                     <Legend
@@ -1989,6 +2592,7 @@ function ReportsPage() {
 
                                     <Bar
                                         dataKey="revenueMinor"
+                                        cursor="pointer"
                                         name="Ciro"
                                         fill="var(--color-secondary)"
                                         radius={[
@@ -2001,6 +2605,7 @@ function ReportsPage() {
 
                                     <Bar
                                         dataKey="grossProfitMinor"
+                                        cursor="pointer"
                                         name="Brüt Kâr"
                                         fill="var(--color-primary)"
                                         radius={[
@@ -2012,6 +2617,138 @@ function ReportsPage() {
                                     />
                                 </BarChart>
                             </ResponsiveContainer>
+                        </div>
+                    )}
+
+                    {selectedProductDetail && (
+                        <div
+                            style={{
+                                marginTop: 14,
+                                padding: 14,
+                                border:
+                                    '1px solid var(--color-border)',
+                                borderRadius: 12,
+                                background:
+                                    'var(--color-surface)',
+                            }}
+                        >
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    alignItems:
+                                        'flex-start',
+                                    justifyContent:
+                                        'space-between',
+                                    gap: 12,
+                                }}
+                            >
+                                <div>
+                                    <strong
+                                        style={{
+                                            display:
+                                                'block',
+                                            color:
+                                                'var(--color-text)',
+                                        }}
+                                    >
+                                        {selectedProductDetail.productName}
+                                    </strong>
+
+                                    <small
+                                        style={{
+                                            color:
+                                                'var(--color-text-muted)',
+                                        }}
+                                    >
+                                        {selectedProductDetail.sku
+                                            ? `SKU: ${selectedProductDetail.sku}`
+                                            : 'SKU yok'}
+                                    </small>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setSelectedProductId(
+                                            null,
+                                        )
+                                    }
+                                    style={{
+                                        border:
+                                            '1px solid var(--color-border)',
+                                        borderRadius: 8,
+                                        padding:
+                                            '5px 9px',
+                                        cursor:
+                                            'pointer',
+                                        background:
+                                            'transparent',
+                                        color:
+                                            'var(--color-text-muted)',
+                                        font:
+                                            'inherit',
+                                        fontSize: 12,
+                                    }}
+                                >
+                                    Kapat
+                                </button>
+                            </div>
+
+                            {renderMetricGrid([
+                                {
+                                    label:
+                                        'İşlem',
+                                    value:
+                                        `${selectedProductDetail.transactionCount}`,
+                                },
+                                {
+                                    label:
+                                        'Satılan',
+                                    value:
+                                        `${selectedProductDetail.quantity} adet`,
+                                },
+                                {
+                                    label:
+                                        'Ciro',
+                                    value:
+                                        formatMoneyFromMinor(
+                                            selectedProductDetail.revenueMinor,
+                                        ),
+                                },
+                                {
+                                    label:
+                                        'Maliyet',
+                                    value:
+                                        formatMoneyFromMinor(
+                                            selectedProductDetail.costMinor,
+                                        ),
+                                },
+                                {
+                                    label:
+                                        'Brüt Kâr',
+                                    value:
+                                        formatMoneyFromMinor(
+                                            selectedProductDetail.grossProfitMinor,
+                                        ),
+                                },
+                                {
+                                    label:
+                                        'Kâr Marjı',
+                                    value:
+                                        formatProfitMargin(
+                                            selectedProductDetail.revenueMinor,
+                                            selectedProductDetail.grossProfitMinor,
+                                        ),
+                                },
+                                {
+                                    label:
+                                        'İndirim',
+                                    value:
+                                        formatMoneyFromMinor(
+                                            selectedProductDetail.discountMinor,
+                                        ),
+                                },
+                            ])}
                         </div>
                     )}
                 </article>
