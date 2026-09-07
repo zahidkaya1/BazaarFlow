@@ -16,14 +16,21 @@ export type CreateInventoryLotInput = {
     note?: string
 }
 
-function normalizeOptionalText(value?: string): string | undefined {
+function normalizeOptionalText(
+    value?: string,
+): string | undefined {
     const normalized = value?.trim()
 
     return normalized || undefined
 }
 
-function validateQuantity(quantity: number): void {
-    if (!Number.isSafeInteger(quantity) || quantity <= 0) {
+function validateQuantity(
+    quantity: number,
+): void {
+    if (
+        !Number.isSafeInteger(quantity) ||
+        quantity <= 0
+    ) {
         throw new Error(
             'Stok adedi sıfırdan büyük tam sayı olmalıdır.',
         )
@@ -31,88 +38,137 @@ function validateQuantity(quantity: number): void {
 }
 
 function validateMoney(value: number): void {
-    if (!Number.isSafeInteger(value) || value < 0) {
+    if (
+        !Number.isSafeInteger(value) ||
+        value < 0
+    ) {
         throw new Error(
             'Birim alış maliyeti negatif olmayan geçerli bir tutar olmalıdır.',
         )
     }
 }
 
-function validateDateOnly(value: string): void {
-    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+function validateDateOnly(
+    value: string,
+): void {
+    const match =
+        /^(\d{4})-(\d{2})-(\d{2})$/.exec(
+            value,
+        )
 
     if (!match) {
-        throw new Error('Geçerli bir stok tarihi girilmelidir.')
+        throw new Error(
+            'Geçerli bir stok tarihi girilmelidir.',
+        )
     }
 
     const year = Number(match[1])
     const month = Number(match[2])
     const day = Number(match[3])
 
-    const date = new Date(Date.UTC(year, month - 1, day))
+    const date = new Date(
+        Date.UTC(
+            year,
+            month - 1,
+            day,
+        ),
+    )
 
     const isValid =
         date.getUTCFullYear() === year &&
-        date.getUTCMonth() === month - 1 &&
+        date.getUTCMonth() ===
+        month - 1 &&
         date.getUTCDate() === day
 
     if (!isValid) {
-        throw new Error('Geçerli bir stok tarihi girilmelidir.')
+        throw new Error(
+            'Geçerli bir stok tarihi girilmelidir.',
+        )
     }
 }
 
-async function ensureProductExists(productId: string): Promise<void> {
-    const product = await db.products.get(productId)
+async function ensureProductExists(
+    productId: string,
+): Promise<void> {
+    const product =
+        await db.products.get(
+            productId,
+        )
 
     if (!product) {
-        throw new Error('Seçilen ürün bulunamadı.')
+        throw new Error(
+            'Seçilen ürün bulunamadı.',
+        )
     }
 }
 
-
 export const inventoryService = {
-    async getAll(): Promise<InventoryLot[]> {
-        const lots = await db.inventoryLots.toArray()
+    async getAll(): Promise<
+        InventoryLot[]
+    > {
+        const lots =
+            await db.inventoryLots.toArray()
 
-        return lots.sort(compareInventoryLotsForFifo)
+        return lots.sort(
+            compareInventoryLotsForFifo,
+        )
     },
 
-    async getById(id: string): Promise<InventoryLot | undefined> {
+    async getById(
+        id: string,
+    ): Promise<
+        InventoryLot | undefined
+    > {
         return db.inventoryLots.get(id)
     },
 
     async getByProductId(
         productId: string,
     ): Promise<InventoryLot[]> {
-        const lots = await db.inventoryLots
-            .where('productId')
-            .equals(productId)
-            .toArray()
+        const lots =
+            await db.inventoryLots
+                .where('productId')
+                .equals(productId)
+                .toArray()
 
-        return lots.sort(compareInventoryLotsForFifo)
+        return lots.sort(
+            compareInventoryLotsForFifo,
+        )
     },
 
     async getAvailableLotsForProduct(
         productId: string,
     ): Promise<InventoryLot[]> {
-        const lots = await db.inventoryLots
-            .where('productId')
-            .equals(productId)
-            .toArray()
+        const lots =
+            await db.inventoryLots
+                .where('productId')
+                .equals(productId)
+                .toArray()
 
         return lots
-            .filter((lot) => lot.quantityRemaining > 0)
-            .sort(compareInventoryLotsForFifo)
+            .filter(
+                (lot) =>
+                    lot.quantityRemaining >
+                    0,
+            )
+            .sort(
+                compareInventoryLotsForFifo,
+            )
     },
 
-    async getCurrentStock(productId: string): Promise<number> {
-        const lots = await db.inventoryLots
-            .where('productId')
-            .equals(productId)
-            .toArray()
+    async getCurrentStock(
+        productId: string,
+    ): Promise<number> {
+        const lots =
+            await db.inventoryLots
+                .where('productId')
+                .equals(productId)
+                .toArray()
 
         return lots.reduce(
-            (total, lot) => total + lot.quantityRemaining,
+            (total, lot) =>
+                total +
+                lot.quantityRemaining,
             0,
         )
     },
@@ -120,37 +176,69 @@ export const inventoryService = {
     async create(
         input: CreateInventoryLotInput,
     ): Promise<InventoryLot> {
-        const productId = input.productId.trim()
-        const purchaseDate = input.purchaseDate.trim()
+        const productId =
+            input.productId.trim()
+
+        const purchaseDate =
+            input.purchaseDate.trim()
 
         if (!productId) {
-            throw new Error('Ürün seçilmelidir.')
+            throw new Error(
+                'Ürün seçilmelidir.',
+            )
         }
 
+        /*
+         * adjustment lotları yalnızca
+         * inventoryAdjustmentService tarafından
+         * oluşturulmalıdır. Böylece düzeltme kaydı
+         * ile FIFO lotu arasındaki bağlantı korunur.
+         */
         if (
-            input.entryType !== 'purchase' &&
-            input.entryType !== 'opening'
+            input.entryType !==
+            'purchase' &&
+            input.entryType !==
+            'opening'
         ) {
-            throw new Error('Geçerli bir stok giriş türü seçilmelidir.')
+            throw new Error(
+                'Geçerli bir stok giriş türü seçilmelidir.',
+            )
         }
 
-        validateDateOnly(purchaseDate)
-        validateQuantity(input.quantityReceived)
-        validateMoney(input.unitCostMinor)
+        validateDateOnly(
+            purchaseDate,
+        )
 
-        await ensureProductExists(productId)
+        validateQuantity(
+            input.quantityReceived,
+        )
 
-        const now = new Date().toISOString()
+        validateMoney(
+            input.unitCostMinor,
+        )
+
+        await ensureProductExists(
+            productId,
+        )
+
+        const now =
+            new Date().toISOString()
 
         const lot: InventoryLot = {
             id: createId(),
             productId,
-            entryType: input.entryType,
+            entryType:
+                input.entryType,
             purchaseDate,
-            quantityReceived: input.quantityReceived,
-            quantityRemaining: input.quantityReceived,
-            unitCostMinor: input.unitCostMinor,
-            note: normalizeOptionalText(input.note),
+            quantityReceived:
+                input.quantityReceived,
+            quantityRemaining:
+                input.quantityReceived,
+            unitCostMinor:
+                input.unitCostMinor,
+            note: normalizeOptionalText(
+                input.note,
+            ),
             createdAt: now,
             updatedAt: now,
         }
@@ -162,9 +250,13 @@ export const inventoryService = {
                 db.sales,
                 db.saleItems,
                 db.inventoryAllocations,
+                db.inventoryAdjustments,
+                db.inventoryAdjustmentAllocations,
             ],
             async () => {
-                await db.inventoryLots.add(lot)
+                await db.inventoryLots.add(
+                    lot,
+                )
 
                 await rebuildFifoStateInCurrentTransaction()
 

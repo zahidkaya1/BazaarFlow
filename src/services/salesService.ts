@@ -22,12 +22,14 @@ export type CreateSaleInput = {
     items: CreateSaleItemInput[]
 }
 
-export type UpdateSaleInput = CreateSaleInput
+export type UpdateSaleInput =
+    CreateSaleInput
 
-export type SaleHistoryItem = SaleItem & {
-    productName: string
-    costMinor: number
-}
+export type SaleHistoryItem =
+    SaleItem & {
+        productName: string
+        costMinor: number
+    }
 
 export type SaleHistoryRecord = {
     sale: Sale
@@ -51,8 +53,13 @@ function normalizeOptionalText(
     return normalized || undefined
 }
 
-function validateDateOnly(value: string): void {
-    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+function validateDateOnly(
+    value: string,
+): void {
+    const match =
+        /^(\d{4})-(\d{2})-(\d{2})$/.exec(
+            value,
+        )
 
     if (!match) {
         throw new Error(
@@ -65,12 +72,17 @@ function validateDateOnly(value: string): void {
     const day = Number(match[3])
 
     const date = new Date(
-        Date.UTC(year, month - 1, day),
+        Date.UTC(
+            year,
+            month - 1,
+            day,
+        ),
     )
 
     const isValid =
         date.getUTCFullYear() === year &&
-        date.getUTCMonth() === month - 1 &&
+        date.getUTCMonth() ===
+        month - 1 &&
         date.getUTCDate() === day
 
     if (!isValid) {
@@ -80,16 +92,26 @@ function validateDateOnly(value: string): void {
     }
 }
 
-function validateQuantity(value: number): void {
-    if (!Number.isSafeInteger(value) || value <= 0) {
+function validateQuantity(
+    value: number,
+): void {
+    if (
+        !Number.isSafeInteger(value) ||
+        value <= 0
+    ) {
         throw new Error(
             'Satış adedi sıfırdan büyük tam sayı olmalıdır.',
         )
     }
 }
 
-function validateMoney(value: number): void {
-    if (!Number.isSafeInteger(value) || value < 0) {
+function validateMoney(
+    value: number,
+): void {
+    if (
+        !Number.isSafeInteger(value) ||
+        value < 0
+    ) {
         throw new Error(
             'Geçerli bir satış fiyatı girilmelidir.',
         )
@@ -105,18 +127,27 @@ function validateSaleItems(
         )
     }
 
-    const uniqueProductIds = new Set<string>()
+    const uniqueProductIds =
+        new Set<string>()
 
     for (const item of items) {
-        if (uniqueProductIds.has(item.productId)) {
+        if (
+            uniqueProductIds.has(
+                item.productId,
+            )
+        ) {
             throw new Error(
                 'Aynı ürün bir satışta yalnızca bir kez bulunabilir.',
             )
         }
 
-        uniqueProductIds.add(item.productId)
+        uniqueProductIds.add(
+            item.productId,
+        )
 
-        validateQuantity(item.quantity)
+        validateQuantity(
+            item.quantity,
+        )
     }
 }
 
@@ -128,9 +159,10 @@ async function buildSaleItems(
     const saleItems: SaleItem[] = []
 
     for (const input of inputs) {
-        const product = await db.products.get(
-            input.productId,
-        )
+        const product =
+            await db.products.get(
+                input.productId,
+            )
 
         if (!product) {
             throw new Error(
@@ -146,31 +178,43 @@ async function buildSaleItems(
             input.actualUnitPriceMinor ??
             listUnitPriceMinor
 
-        validateMoney(listUnitPriceMinor)
-        validateMoney(actualUnitPriceMinor)
+        validateMoney(
+            listUnitPriceMinor,
+        )
+
+        validateMoney(
+            actualUnitPriceMinor,
+        )
 
         saleItems.push({
             id: createId(),
             saleId,
-            productId: product.id,
+            productId:
+                product.id,
 
             /*
-             * Ürünün adı sonradan değişse bile geçmiş satış
-             * kaydı satış anındaki adı koruyabilsin.
+             * Ürünün adı sonradan değişse bile
+             * geçmiş satış kaydı satış anındaki
+             * adı koruyabilsin.
              */
-            productNameSnapshot: product.name,
+            productNameSnapshot:
+                product.name,
 
-            quantity: input.quantity,
+            quantity:
+                input.quantity,
 
             listUnitPriceMinor,
             actualUnitPriceMinor,
 
-            discountReason: normalizeOptionalText(
-                input.discountReason,
-            ),
+            discountReason:
+                normalizeOptionalText(
+                    input.discountReason,
+                ),
 
-            createdAt: timestamp,
-            updatedAt: timestamp,
+            createdAt:
+                timestamp,
+            updatedAt:
+                timestamp,
         })
     }
 
@@ -182,32 +226,43 @@ function sortSalesDescending(
     second: Sale,
 ): number {
     const dateComparison =
-        second.saleDate.localeCompare(first.saleDate)
+        second.saleDate.localeCompare(
+            first.saleDate,
+        )
 
     if (dateComparison !== 0) {
         return dateComparison
     }
 
     const createdComparison =
-        second.createdAt.localeCompare(first.createdAt)
+        second.createdAt.localeCompare(
+            first.createdAt,
+        )
 
     if (createdComparison !== 0) {
         return createdComparison
     }
 
-    return second.id.localeCompare(first.id)
+    return second.id.localeCompare(
+        first.id,
+    )
 }
 
 export const salesService = {
     async getAll(): Promise<Sale[]> {
-        const sales = await db.sales.toArray()
+        const sales =
+            await db.sales.toArray()
 
-        return sales.sort(sortSalesDescending)
+        return sales.sort(
+            sortSalesDescending,
+        )
     },
 
     async getById(
         id: string,
-    ): Promise<Sale | undefined> {
+    ): Promise<
+        Sale | undefined
+    > {
         return db.sales.get(id)
     },
 
@@ -220,7 +275,9 @@ export const salesService = {
             .toArray()
     },
 
-    async getHistory(): Promise<SaleHistoryRecord[]> {
+    async getHistory(): Promise<
+        SaleHistoryRecord[]
+    > {
         const [
             sales,
             saleItems,
@@ -233,33 +290,46 @@ export const salesService = {
             db.products.toArray(),
         ])
 
-        const productNames = new Map(
-            products.map((product) => [
-                product.id,
-                product.name,
-            ]),
-        )
+        const productNames =
+            new Map(
+                products.map(
+                    (product) => [
+                        product.id,
+                        product.name,
+                    ],
+                ),
+            )
 
-        const itemsBySale = new Map<
-            string,
-            SaleItem[]
-        >()
+        const itemsBySale =
+            new Map<
+                string,
+                SaleItem[]
+            >()
 
         for (const item of saleItems) {
             const current =
-                itemsBySale.get(item.saleId) ?? []
+                itemsBySale.get(
+                    item.saleId,
+                ) ?? []
 
             current.push(item)
 
-            itemsBySale.set(item.saleId, current)
+            itemsBySale.set(
+                item.saleId,
+                current,
+            )
         }
 
-        const costBySaleItem = new Map<
-            string,
-            number
-        >()
+        const costBySaleItem =
+            new Map<
+                string,
+                number
+            >()
 
-        for (const allocation of allocations) {
+        for (
+            const allocation of
+            allocations
+        ) {
             const cost =
                 allocation.quantity *
                 allocation.unitCostMinor
@@ -273,64 +343,101 @@ export const salesService = {
         }
 
         return sales
-            .sort(sortSalesDescending)
+            .sort(
+                sortSalesDescending,
+            )
             .map((sale) => {
                 const items = (
-                    itemsBySale.get(sale.id) ?? []
-                ).map((item): SaleHistoryItem => ({
-                    ...item,
+                    itemsBySale.get(
+                        sale.id,
+                    ) ?? []
+                ).map(
+                    (
+                        item,
+                    ): SaleHistoryItem => ({
+                        ...item,
 
-                    productName:
-                        item.productNameSnapshot ??
-                        productNames.get(item.productId) ??
-                        'Bilinmeyen ürün',
+                        productName:
+                            item.productNameSnapshot ??
+                            productNames.get(
+                                item.productId,
+                            ) ??
+                            'Bilinmeyen ürün',
 
-                    costMinor:
-                        costBySaleItem.get(item.id) ?? 0,
-                }))
-
-                const totalQuantity = items.reduce(
-                    (total, item) =>
-                        total + item.quantity,
-                    0,
+                        costMinor:
+                            costBySaleItem.get(
+                                item.id,
+                            ) ?? 0,
+                    }),
                 )
 
-                const listTotalMinor = items.reduce(
-                    (total, item) =>
-                        total +
-                        item.quantity *
-                        item.listUnitPriceMinor,
-                    0,
-                )
-
-                const revenueMinor = items.reduce(
-                    (total, item) =>
-                        total +
-                        item.quantity *
-                        item.actualUnitPriceMinor,
-                    0,
-                )
-
-                const discountMinor = items.reduce(
-                    (total, item) => {
-                        const difference =
-                            item.listUnitPriceMinor -
-                            item.actualUnitPriceMinor
-
-                        return (
+                const totalQuantity =
+                    items.reduce(
+                        (
+                            total,
+                            item,
+                        ) =>
                             total +
-                            Math.max(0, difference) *
-                            item.quantity
-                        )
-                    },
-                    0,
-                )
+                            item.quantity,
+                        0,
+                    )
 
-                const costMinor = items.reduce(
-                    (total, item) =>
-                        total + item.costMinor,
-                    0,
-                )
+                const listTotalMinor =
+                    items.reduce(
+                        (
+                            total,
+                            item,
+                        ) =>
+                            total +
+                            item.quantity *
+                            item.listUnitPriceMinor,
+                        0,
+                    )
+
+                const revenueMinor =
+                    items.reduce(
+                        (
+                            total,
+                            item,
+                        ) =>
+                            total +
+                            item.quantity *
+                            item.actualUnitPriceMinor,
+                        0,
+                    )
+
+                const discountMinor =
+                    items.reduce(
+                        (
+                            total,
+                            item,
+                        ) => {
+                            const difference =
+                                item.listUnitPriceMinor -
+                                item.actualUnitPriceMinor
+
+                            return (
+                                total +
+                                Math.max(
+                                    0,
+                                    difference,
+                                ) *
+                                item.quantity
+                            )
+                        },
+                        0,
+                    )
+
+                const costMinor =
+                    items.reduce(
+                        (
+                            total,
+                            item,
+                        ) =>
+                            total +
+                            item.costMinor,
+                        0,
+                    )
 
                 return {
                     sale,
@@ -345,7 +452,8 @@ export const salesService = {
                     costMinor,
 
                     grossProfitMinor:
-                        revenueMinor - costMinor,
+                        revenueMinor -
+                        costMinor,
                 }
             })
     },
@@ -353,10 +461,16 @@ export const salesService = {
     async create(
         input: CreateSaleInput,
     ): Promise<Sale> {
-        const saleDate = input.saleDate.trim()
+        const saleDate =
+            input.saleDate.trim()
 
-        validateDateOnly(saleDate)
-        validateSaleItems(input.items)
+        validateDateOnly(
+            saleDate,
+        )
+
+        validateSaleItems(
+            input.items,
+        )
 
         return db.transaction(
             'rw',
@@ -366,14 +480,18 @@ export const salesService = {
                 db.sales,
                 db.saleItems,
                 db.inventoryAllocations,
+                db.inventoryAdjustments,
+                db.inventoryAdjustmentAllocations,
             ],
             async () => {
-                const now = new Date().toISOString()
+                const now =
+                    new Date().toISOString()
 
                 const sale: Sale = {
                     id: createId(),
                     saleDate,
-                    status: 'completed',
+                    status:
+                        'completed',
                     note: normalizeOptionalText(
                         input.note,
                     ),
@@ -381,14 +499,20 @@ export const salesService = {
                     updatedAt: now,
                 }
 
-                const saleItems = await buildSaleItems(
-                    sale.id,
-                    input.items,
-                    now,
+                const saleItems =
+                    await buildSaleItems(
+                        sale.id,
+                        input.items,
+                        now,
+                    )
+
+                await db.sales.add(
+                    sale,
                 )
 
-                await db.sales.add(sale)
-                await db.saleItems.bulkAdd(saleItems)
+                await db.saleItems.bulkAdd(
+                    saleItems,
+                )
 
                 await rebuildFifoStateInCurrentTransaction()
 
@@ -401,10 +525,16 @@ export const salesService = {
         id: string,
         input: UpdateSaleInput,
     ): Promise<Sale> {
-        const saleDate = input.saleDate.trim()
+        const saleDate =
+            input.saleDate.trim()
 
-        validateDateOnly(saleDate)
-        validateSaleItems(input.items)
+        validateDateOnly(
+            saleDate,
+        )
+
+        validateSaleItems(
+            input.items,
+        )
 
         return db.transaction(
             'rw',
@@ -414,9 +544,14 @@ export const salesService = {
                 db.sales,
                 db.saleItems,
                 db.inventoryAllocations,
+                db.inventoryAdjustments,
+                db.inventoryAdjustmentAllocations,
             ],
             async () => {
-                const current = await db.sales.get(id)
+                const current =
+                    await db.sales.get(
+                        id,
+                    )
 
                 if (!current) {
                     throw new Error(
@@ -424,13 +559,17 @@ export const salesService = {
                     )
                 }
 
-                if (current.status === 'cancelled') {
+                if (
+                    current.status ===
+                    'cancelled'
+                ) {
                     throw new Error(
                         'İptal edilmiş satış düzenlenemez.',
                     )
                 }
 
-                const now = new Date().toISOString()
+                const now =
+                    new Date().toISOString()
 
                 const updated: Sale = {
                     ...current,
@@ -442,23 +581,30 @@ export const salesService = {
                 }
 
                 /*
-                 * Eski satış kalemlerini kaldırıp yeni haliyle
-                 * oluşturuyoruz. FIFO allocations zaten aşağıdaki
-                 * rebuild sırasında baştan oluşturulacak.
+                 * Eski satış kalemlerini kaldırıp
+                 * yeni haliyle oluşturuyoruz.
+                 * FIFO allocations aşağıdaki rebuild
+                 * sırasında baştan oluşturulur.
                  */
                 await db.saleItems
                     .where('saleId')
                     .equals(id)
                     .delete()
 
-                const newItems = await buildSaleItems(
-                    id,
-                    input.items,
-                    now,
+                const newItems =
+                    await buildSaleItems(
+                        id,
+                        input.items,
+                        now,
+                    )
+
+                await db.saleItems.bulkAdd(
+                    newItems,
                 )
 
-                await db.saleItems.bulkAdd(newItems)
-                await db.sales.put(updated)
+                await db.sales.put(
+                    updated,
+                )
 
                 await rebuildFifoStateInCurrentTransaction()
 
@@ -467,7 +613,9 @@ export const salesService = {
         )
     },
 
-    async cancel(id: string): Promise<Sale> {
+    async cancel(
+        id: string,
+    ): Promise<Sale> {
         return db.transaction(
             'rw',
             [
@@ -475,9 +623,14 @@ export const salesService = {
                 db.sales,
                 db.saleItems,
                 db.inventoryAllocations,
+                db.inventoryAdjustments,
+                db.inventoryAdjustmentAllocations,
             ],
             async () => {
-                const current = await db.sales.get(id)
+                const current =
+                    await db.sales.get(
+                        id,
+                    )
 
                 if (!current) {
                     throw new Error(
@@ -485,21 +638,30 @@ export const salesService = {
                     )
                 }
 
-                if (current.status === 'cancelled') {
+                if (
+                    current.status ===
+                    'cancelled'
+                ) {
                     return current
                 }
 
                 const updated: Sale = {
                     ...current,
-                    status: 'cancelled',
-                    updatedAt: new Date().toISOString(),
+                    status:
+                        'cancelled',
+                    updatedAt:
+                        new Date().toISOString(),
                 }
 
-                await db.sales.put(updated)
+                await db.sales.put(
+                    updated,
+                )
 
                 /*
-                 * Satış artık completed olmadığı için FIFO yeniden
-                 * hesaplandığında bu satış stok tüketmeyecek.
+                 * Satış artık completed olmadığı için
+                 * FIFO yeniden hesaplandığında bu satış
+                 * stok tüketmeyecek. Stok düzeltmeleri
+                 * ise aynı kronolojik motorda korunur.
                  */
                 await rebuildFifoStateInCurrentTransaction()
 

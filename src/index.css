@@ -1,3 +1,20 @@
+/*
+ * BazaarFlow — Global Styles
+ *
+ * Bölümler
+ * 01. Tasarım değişkenleri ve temel stiller
+ * 02. Uygulama yerleşimi ve sidebar
+ * 03. Ortak sayfa bileşenleri
+ * 04. Formlar, butonlar ve tablolar
+ * 05. Ürün yönetimi
+ * 06. Stok yönetimi
+ * 07. Satış yönetimi
+ * 08. Dashboard
+ * 09. Raporlar
+ * 10. Stok düzeltmeleri
+ * 11. Responsive
+ */
+
 :root {
   font-family:
     Inter,
@@ -82,14 +99,14 @@ textarea:focus-visible {
   min-height: 100vh;
 }
 
-/* App layout */
+/* ===== 02. UYGULAMA YERLEŞİMİ ===== */
 
 .app-layout {
   display: flex;
   min-height: 100vh;
 }
 
-/* Sidebar */
+/* ----- Sidebar ----- */
 
 .sidebar {
   position: fixed;
@@ -209,7 +226,7 @@ textarea:focus-visible {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Main content */
+/* ----- Ana içerik ----- */
 
 .main-content {
   width: calc(100% - 250px);
@@ -219,7 +236,9 @@ textarea:focus-visible {
   padding: 38px 42px 56px;
 }
 
-/* Page header */
+/* ===== 03. ORTAK SAYFA BİLEŞENLERİ ===== */
+
+/* ----- Sayfa başlığı ----- */
 
 .dashboard {
   width: 100%;
@@ -263,7 +282,7 @@ textarea:focus-visible {
   font-size: 14px;
 }
 
-/* Summary cards */
+/* ----- Özet kartları ----- */
 
 .summary-grid {
   display: grid;
@@ -335,7 +354,7 @@ textarea:focus-visible {
   line-height: 1.4;
 }
 
-/* Dashboard panels */
+/* ----- Panel ----- */
 
 .dashboard-grid {
   display: grid;
@@ -382,7 +401,7 @@ textarea:focus-visible {
   font-size: 12px;
 }
 
-/* Empty state */
+/* ----- Boş durum ----- */
 
 .empty-state {
   min-height: 230px;
@@ -438,15 +457,7 @@ textarea:focus-visible {
   line-height: 1.5;
 }
 
-/* Product management */
-
-.product-management-grid {
-  display: grid;
-  grid-template-columns: minmax(280px, 0.7fr) minmax(0, 1.3fr);
-  gap: 18px;
-
-  margin-bottom: 18px;
-}
+/* ===== 04. FORMLAR, BUTONLAR VE TABLOLAR ===== */
 
 .management-form {
   display: flex;
@@ -609,6 +620,8 @@ textarea:focus-visible {
   color: #6b7280;
 }
 
+/* ----- Ürün listesi ve tablo ----- */
+
 .products-panel {
   margin-top: 0;
 }
@@ -742,7 +755,17 @@ textarea:focus-visible {
   color: var(--color-secondary);
 }
 
-/* Inventory management */
+/* ===== 05. ÜRÜN YÖNETİMİ ===== */
+
+.product-management-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.7fr) minmax(0, 1.3fr);
+  gap: 18px;
+
+  margin-bottom: 18px;
+}
+
+/* ===== 06. STOK YÖNETİMİ ===== */
 
 .inventory-summary-grid {
   display: grid;
@@ -853,7 +876,7 @@ textarea:focus-visible {
   min-width: 980px;
 }
 
-/* Advanced inventory controls */
+/* ----- Gelişmiş stok kontrolleri ----- */
 
 .summary-card-icon-warning {
   background: #fff7ed;
@@ -1086,7 +1109,7 @@ textarea:focus-visible {
   font-weight: 600;
 }
 
-/* Sales management */
+/* ===== 07. SATIŞ YÖNETİMİ ===== */
 
 .sales-summary-grid {
   display: grid;
@@ -1166,7 +1189,7 @@ textarea:focus-visible {
   opacity: 0.5;
 }
 
-/* Inline sale editing */
+/* ----- Satır içi satış düzenleme ----- */
 
 .sale-inline-product {
   min-width: 180px;
@@ -1229,7 +1252,7 @@ textarea:focus-visible {
   opacity: 0.7;
 }
 
-/* Sales history */
+/* ----- Satış geçmişi ----- */
 
 .sales-history-section {
   margin-top: 34px;
@@ -1508,7 +1531,7 @@ textarea:focus-visible {
   font-size: 10px;
 }
 
-/* Advanced sales history filters */
+/* ----- Gelişmiş satış geçmişi filtreleri ----- */
 
 .sales-history-filters {
   display: grid;
@@ -1606,7 +1629,7 @@ textarea:focus-visible {
     0 0 0 3px rgba(20, 184, 166, 0.08);
 }
 
-/* Live dashboard */
+/* ===== 08. DASHBOARD ===== */
 
 .dashboard-summary-grid {
   grid-template-columns:
@@ -1911,7 +1934,7 @@ textarea:focus-visible {
   font-size: 11px;
 }
 
-/* Reports */
+/* ===== 09. RAPORLAR ===== */
 
 .reports-toolbar {
   display: flex;
@@ -2130,11 +2153,239 @@ textarea:focus-visible {
   opacity: 0.7;
 }
 
-/* Responsive */
+/* ===== 10. STOK DÜZELTMELERİ ===== */
+
+.inventory-adjustment-layout {
+  margin-top: 18px;
+}
+
+.adjustment-stock-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 10px 12px;
+
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+
+  background: var(--color-background);
+}
+
+.adjustment-stock-preview span {
+  color: var(--color-text-muted);
+
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.adjustment-stock-preview strong {
+  color: var(--color-text);
+
+  font-size: 12px;
+}
+
+.inventory-adjustment-badge {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 4px 7px;
+
+  border-radius: 999px;
+
+  font-size: 9px;
+  font-weight: 700;
+
+  white-space: nowrap;
+}
+
+.inventory-adjustment-increase {
+  background: var(--color-primary-soft);
+  color: var(--color-secondary);
+}
+
+.inventory-adjustment-decrease {
+  background: rgba(220, 38, 38, 0.08);
+  color: #b91c1c;
+}
+
+.inventory-type-adjustment {
+  background: var(--color-primary-soft);
+  color: var(--color-secondary);
+}
+
+.adjustment-quantity-positive {
+  color: var(--color-secondary);
+}
+
+.adjustment-quantity-negative {
+  color: #b91c1c;
+}
+
+.adjustment-table {
+  min-width: 760px;
+}
+
+/* ----- Düzeltme geri bildirimi ve geçmişi ----- */
+
+.adjustment-form-message {
+  margin-bottom: 14px;
+}
+
+/* ----- Düzeltme geçmişi ----- */
+
+.adjustment-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  padding-top: 12px;
+}
+
+.adjustment-history-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 28px;
+
+  padding: 14px 16px;
+
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+
+  background: var(--color-background);
+}
+
+.adjustment-history-main {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.adjustment-history-title {
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.adjustment-history-title>strong {
+  color: var(--color-text);
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.adjustment-history-sku {
+  color: var(--color-text-soft);
+
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.adjustment-history-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+
+  color: var(--color-text-muted);
+
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.adjustment-history-meta span {
+  min-width: 0;
+}
+
+.adjustment-history-meta span+span::before {
+  content: '•';
+
+  margin-right: 14px;
+
+  color: var(--color-text-soft);
+}
+
+.adjustment-history-values {
+  min-width: 140px;
+
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 4px;
+
+  padding-left: 12px;
+
+  text-align: right;
+}
+
+.adjustment-history-values>strong:first-child {
+  font-size: 16px;
+  line-height: 1.1;
+}
+
+.adjustment-history-values>span {
+  color: var(--color-text-soft);
+
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.adjustment-history-values>strong:last-child {
+  color: var(--color-text);
+
+  font-size: 12px;
+}
+
+/* ===== 11. RESPONSIVE ===== */
+
+/* ----- Tablet / dar masaüstü ----- */
 
 @media (max-width: 1100px) {
+
+  /* Ortak */
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .product-management-grid,
+  .inventory-layout,
+  .sales-layout,
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Stok */
+  .inventory-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Satış */
+  .sales-summary-grid,
+  .history-summary-grid,
+  .sales-history-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Dashboard */
+  .dashboard-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-secondary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Raporlar */
+  .reports-toolbar {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .reports-toolbar-actions {
@@ -2142,68 +2393,25 @@ textarea:focus-visible {
   }
 
   .reports-search-field {
+    width: 100%;
     flex: 1;
-  }
-
-  .inventory-summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .reports-summary-grid,
   .reports-leader-grid {
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr));
-  }
-
-  .reports-toolbar {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .reports-search-field {
-    width: 100%;
-  }
-
-  .dashboard-summary-grid {
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr));
-  }
-
-  .dashboard-secondary-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .sales-history-filters {
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr));
-  }
-
-  .history-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .inventory-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .product-management-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .sales-summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .sales-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .dashboard-grid {
-    grid-template-columns: 1fr;
   }
 }
 
+/* ----- Mobil ----- */
+
 @media (max-width: 768px) {
+
+  /* Uygulama yerleşimi */
+  .app-layout {
+    flex-direction: column;
+  }
+
   .sidebar {
     position: static;
 
@@ -2213,55 +2421,43 @@ textarea:focus-visible {
     padding: 16px;
   }
 
-  .reports-toolbar-actions {
-    align-items: stretch;
-    flex-direction: column;
+  .sidebar-brand {
+    padding-bottom: 16px;
   }
 
-  .reports-export-button {
-    width: 100%;
+  .sidebar-navigation {
+    flex-direction: row;
+    overflow-x: auto;
   }
 
-  .dashboard-summary-grid {
-    grid-template-columns: 1fr;
+  .navigation-item {
+    width: auto;
+    flex-shrink: 0;
   }
 
-  .dashboard-sale-row {
-    align-items: flex-start;
-    flex-direction: column;
+  .sidebar-footer {
+    display: none;
   }
 
-  .reports-summary-grid,
-  .reports-leader-grid,
-  .reports-custom-range {
-    grid-template-columns: 1fr;
-  }
-
-  .reports-period-selector {
-    display: grid;
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr));
-  }
-
-  .reports-period-button:last-child {
-    grid-column: 1 / -1;
-  }
-
-  .dashboard-sale-values {
+  .main-content {
     width: 100%;
 
-    justify-content: space-between;
+    margin-left: 0;
+    padding: 26px 20px 40px;
   }
 
-  .dashboard-stock-overview {
+  /* Ortak */
+  .page-header h1 {
+    font-size: 26px;
+  }
+
+  .summary-grid,
+  .form-row {
     grid-template-columns: 1fr;
   }
 
+  /* Stok */
   .inventory-summary-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .sales-history-filters {
     grid-template-columns: 1fr;
   }
 
@@ -2290,16 +2486,30 @@ textarea:focus-visible {
     min-width: auto;
   }
 
-  .sale-history-right {
+  /* Stok düzeltmeleri */
+  .inventory-adjustment-layout {
+    margin-top: 14px;
+  }
+
+  .adjustment-history-item {
+    grid-template-columns: 1fr;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .adjustment-history-values {
     width: 100%;
-    align-items: stretch;
+    min-width: 0;
+
+    align-items: flex-start;
+
+    text-align: left;
   }
 
-  .sale-history-actions {
-    justify-content: flex-start;
-  }
-
-  .sales-summary-grid {
+  /* Satış */
+  .sales-summary-grid,
+  .history-summary-grid,
+  .sales-history-filters {
     grid-template-columns: 1fr;
   }
 
@@ -2312,12 +2522,19 @@ textarea:focus-visible {
     width: 100%;
   }
 
-  .history-summary-grid {
-    grid-template-columns: 1fr;
+  .sale-history-card-header,
+  .sale-history-item {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
-  .sale-history-card-header {
-    flex-direction: column;
+  .sale-history-right {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .sale-history-actions {
+    justify-content: flex-start;
   }
 
   .sale-history-totals {
@@ -2325,58 +2542,48 @@ textarea:focus-visible {
     justify-content: space-between;
   }
 
-  .sale-history-item {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-
   .sale-history-item-values {
     gap: 10px;
   }
 
-  .inventory-summary-grid {
+  /* Dashboard */
+  .dashboard-summary-grid,
+  .dashboard-stock-overview {
     grid-template-columns: 1fr;
   }
 
-  .app-layout {
+  .dashboard-sale-row {
+    align-items: flex-start;
     flex-direction: column;
   }
 
-  .sidebar-brand {
-    padding-bottom: 16px;
-  }
-
-  .sidebar-navigation {
-    flex-direction: row;
-    overflow-x: auto;
-  }
-
-  .navigation-item {
-    width: auto;
-    flex-shrink: 0;
-  }
-
-  .sidebar-footer {
-    display: none;
-  }
-
-  .main-content {
+  .dashboard-sale-values {
     width: 100%;
-
-    margin-left: 0;
-    padding: 26px 20px 40px;
+    justify-content: space-between;
   }
 
-  .summary-grid {
+  /* Raporlar */
+  .reports-toolbar-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .reports-export-button {
+    width: 100%;
+  }
+
+  .reports-summary-grid,
+  .reports-leader-grid,
+  .reports-custom-range {
     grid-template-columns: 1fr;
   }
 
-  .page-header h1 {
-    font-size: 26px;
+  .reports-period-selector {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .form-row {
-    grid-template-columns: 1fr;
+  .reports-period-button:last-child {
+    grid-column: 1 / -1;
   }
 }

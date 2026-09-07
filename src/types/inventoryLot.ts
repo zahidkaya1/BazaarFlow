@@ -1,4 +1,7 @@
-export type InventoryEntryType = 'purchase' | 'opening'
+export type InventoryEntryType =
+    | 'purchase'
+    | 'opening'
+    | 'adjustment'
 
 export type InventoryLot = {
     id: string
@@ -11,6 +14,12 @@ export type InventoryLot = {
     quantityRemaining: number
 
     unitCostMinor: number
+
+    /*
+     * Lot manuel stok artışı sonucunda oluştuysa
+     * ilgili düzeltme kaydına bağlanır.
+     */
+    sourceAdjustmentId?: string
 
     note?: string
 

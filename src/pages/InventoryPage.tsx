@@ -3,11 +3,19 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import {
     AlertTriangle,
     Boxes,
+    History,
+    Minus,
     PackagePlus,
+    Plus,
     Search,
 } from 'lucide-react'
+import {
+    inventoryAdjustmentService,
+    type InventoryAdjustmentHistoryRecord,
+} from '../services/inventoryAdjustmentService'
 import { inventoryService } from '../services/inventoryService'
 import { productService } from '../services/productService'
+import type { InventoryAdjustmentDirection } from '../types/inventoryAdjustment'
 import type {
     InventoryEntryType,
     InventoryLot,
@@ -37,9 +45,35 @@ function formatDate(value: string): string {
 function getEntryTypeLabel(
     entryType: InventoryEntryType,
 ): string {
-    return entryType === 'opening'
-        ? 'Açılış Stoku'
-        : 'Stok Alımı'
+    switch (entryType) {
+        case 'opening':
+            return 'Açılış Stoku'
+        case 'adjustment':
+            return 'Düzeltme Girişi'
+        case 'purchase':
+            return 'Stok Alımı'
+    }
+}
+
+function getEntryTypeBadgeClass(
+    entryType: InventoryEntryType,
+): string {
+    switch (entryType) {
+        case 'opening':
+            return 'inventory-type-opening'
+        case 'adjustment':
+            return 'inventory-type-adjustment'
+        case 'purchase':
+            return 'inventory-type-purchase'
+    }
+}
+
+function getAdjustmentDirectionLabel(
+    direction: InventoryAdjustmentDirection,
+): string {
+    return direction === 'increase'
+        ? 'Stok Artışı'
+        : 'Stok Azalışı'
 }
 
 function normalizeSearch(value: string): string {
@@ -51,25 +85,31 @@ function normalizeSearch(value: string): string {
 function InventoryPage() {
     const data = useLiveQuery(
         async () => {
-            const [products, lots] = await Promise.all([
-                productService.getAll(),
-                inventoryService.getAll(),
-            ])
+            const [products, lots, adjustments] =
+                await Promise.all([
+                    productService.getAll(),
+                    inventoryService.getAll(),
+                    inventoryAdjustmentService.getHistory(),
+                ])
 
             return {
                 products,
                 lots,
+                adjustments,
             }
         },
         [],
         {
             products: [] as Product[],
             lots: [] as InventoryLot[],
+            adjustments:
+                [] as InventoryAdjustmentHistoryRecord[],
         },
     )
 
     const products = data.products
     const lots = data.lots
+    const adjustments = data.adjustments
 
     const [entryType, setEntryType] =
         useState<InventoryEntryType>('purchase')
@@ -85,6 +125,59 @@ function InventoryPage() {
 
     const [unitCost, setUnitCost] = useState('')
     const [note, setNote] = useState('')
+
+    const [
+        adjustmentDirection,
+        setAdjustmentDirection,
+    ] =
+        useState<InventoryAdjustmentDirection>(
+            'decrease',
+        )
+
+    const [
+        adjustmentProductId,
+        setAdjustmentProductId,
+    ] = useState('')
+
+    const [
+        adjustmentDate,
+        setAdjustmentDate,
+    ] = useState(getTodayDateValue())
+
+    const [
+        adjustmentQuantity,
+        setAdjustmentQuantity,
+    ] = useState('')
+
+    const [
+        adjustmentUnitCost,
+        setAdjustmentUnitCost,
+    ] = useState('')
+
+    const [
+        adjustmentReason,
+        setAdjustmentReason,
+    ] = useState('')
+
+    const [
+        adjustmentNote,
+        setAdjustmentNote,
+    ] = useState('')
+
+    const [
+        adjustmentSearch,
+        setAdjustmentSearch,
+    ] = useState('')
+
+    const [
+        adjustmentMessage,
+        setAdjustmentMessage,
+    ] = useState('')
+
+    const [
+        adjustmentError,
+        setAdjustmentError,
+    ] = useState('')
 
     const [stockSearch, setStockSearch] = useState('')
     const [historySearch, setHistorySearch] = useState('')
@@ -152,6 +245,27 @@ function InventoryPage() {
 
         return values
     }, [lots])
+
+    const selectedAdjustmentProduct =
+        useMemo(
+            () =>
+                products.find(
+                    (product) =>
+                        product.id ===
+                        adjustmentProductId,
+                ),
+            [
+                products,
+                adjustmentProductId,
+            ],
+        )
+
+    const selectedAdjustmentStock =
+        selectedAdjustmentProduct
+            ? stockByProduct.get(
+                selectedAdjustmentProduct.id,
+            ) ?? 0
+            : null
 
     const totalQuantity = lots.reduce(
         (total, lot) =>
@@ -289,6 +403,34 @@ function InventoryPage() {
         })
     }, [lots, productMap, historySearch])
 
+    const filteredAdjustments = useMemo(() => {
+        const query = normalizeSearch(
+            adjustmentSearch,
+        )
+
+        if (!query) {
+            return adjustments
+        }
+
+        return adjustments.filter((record) => {
+            const searchableText =
+                normalizeSearch(
+                    [
+                        record.productName,
+                        record.productSku ?? '',
+                        record.adjustment.reason,
+                        record.adjustment.note ?? '',
+                        record.adjustment.adjustmentDate,
+                        getAdjustmentDirectionLabel(
+                            record.adjustment.direction,
+                        ),
+                    ].join(' '),
+                )
+
+            return searchableText.includes(query)
+        })
+    }, [adjustments, adjustmentSearch])
+
     async function handleSubmit(
         event: FormEvent<HTMLFormElement>,
     ) {
@@ -337,6 +479,71 @@ function InventoryPage() {
                 caughtError instanceof Error
                     ? caughtError.message
                     : 'Stok girişi kaydedilemedi.',
+            )
+        }
+    }
+
+    async function handleAdjustmentSubmit(
+        event: FormEvent<HTMLFormElement>,
+    ) {
+        event.preventDefault()
+
+        setAdjustmentMessage('')
+        setAdjustmentError('')
+
+        try {
+            const quantity = Number(
+                adjustmentQuantity,
+            )
+
+            if (
+                !Number.isSafeInteger(quantity) ||
+                quantity <= 0
+            ) {
+                throw new Error(
+                    'Düzeltme adedi sıfırdan büyük tam sayı olmalıdır.',
+                )
+            }
+
+            const unitCostMinor =
+                adjustmentDirection === 'increase'
+                    ? parseMoneyToMinor(
+                        adjustmentUnitCost,
+                    )
+                    : undefined
+
+            await inventoryAdjustmentService.create(
+                {
+                    productId:
+                        adjustmentProductId,
+                    adjustmentDate,
+                    direction:
+                        adjustmentDirection,
+                    quantity,
+                    unitCostMinor,
+                    reason:
+                        adjustmentReason,
+                    note:
+                        adjustmentNote,
+                },
+            )
+
+            setAdjustmentQuantity('')
+            setAdjustmentUnitCost('')
+            setAdjustmentReason('')
+            setAdjustmentNote('')
+
+            setAdjustmentMessage(
+                adjustmentDirection ===
+                    'increase'
+                    ? 'Stok artışı başarıyla kaydedildi ve yeni FIFO partisi oluşturuldu.'
+                    : 'Stok azalışı başarıyla kaydedildi ve FIFO sırasına göre stoktan düşüldü.',
+            )
+        } catch (caughtError) {
+            setAdjustmentError(
+                caughtError instanceof Error
+                    ? caughtError.message
+                    : 'Stok düzeltmesi kaydedilemedi.',
             )
         }
     }
@@ -823,15 +1030,395 @@ function InventoryPage() {
                 </article>
             </section>
 
+            <section className="inventory-layout inventory-adjustment-layout">
+                <article className="dashboard-panel">
+                    <div className="panel-header">
+                        <div>
+                            <h2>Stok Düzeltme</h2>
+
+                            <p>
+                                Sayım farkı, hasar, kayıp veya
+                                benzeri nedenlerle stoğu kayıtlı
+                                şekilde artırın ya da azaltın.
+                            </p>
+                        </div>
+                    </div>
+
+                    {(adjustmentMessage ||
+                        adjustmentError) && (
+                            <div
+                                className={`form-message adjustment-form-message ${adjustmentError
+                                    ? 'form-message-error'
+                                    : 'form-message-success'
+                                    }`}
+                                role="status"
+                                aria-live="polite"
+                            >
+                                {adjustmentError ||
+                                    adjustmentMessage}
+                            </div>
+                        )}
+
+                    <form
+                        className="management-form"
+                        onSubmit={handleAdjustmentSubmit}
+                    >
+                        <label className="form-field">
+                            <span>Düzeltme türü</span>
+
+                            <select
+                                value={adjustmentDirection}
+                                onChange={(event) => {
+                                    setAdjustmentDirection(
+                                        event.target
+                                            .value as InventoryAdjustmentDirection,
+                                    )
+
+                                    setAdjustmentUnitCost('')
+                                    setAdjustmentMessage('')
+                                    setAdjustmentError('')
+                                }}
+                            >
+                                <option value="decrease">
+                                    Stok Azalt
+                                </option>
+
+                                <option value="increase">
+                                    Stok Artır
+                                </option>
+                            </select>
+                        </label>
+
+                        <div className="inventory-info-box">
+                            {adjustmentDirection ===
+                                'increase'
+                                ? 'Stok artışı, girdiğiniz birim maliyetle yeni bir FIFO partisi oluşturur.'
+                                : 'Stok azalışı, seçilen tarihte mevcut FIFO partilerinden kronolojik sırayla düşülür.'}
+                        </div>
+
+                        <label className="form-field">
+                            <span>Ürün</span>
+
+                            <select
+                                value={adjustmentProductId}
+                                onChange={(event) =>
+                                    setAdjustmentProductId(
+                                        event.target.value,
+                                    )
+                                }
+                                required
+                            >
+                                <option value="">
+                                    Ürün seçin
+                                </option>
+
+                                {products.map((product) => (
+                                    <option
+                                        key={product.id}
+                                        value={product.id}
+                                    >
+                                        {product.name}
+                                        {product.sku
+                                            ? ` · ${product.sku}`
+                                            : ''}
+                                        {!product.isActive
+                                            ? ' (Pasif)'
+                                            : ''}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+
+                        {selectedAdjustmentProduct && (
+                            <div className="adjustment-stock-preview">
+                                <span>
+                                    Güncel stok
+                                </span>
+
+                                <strong>
+                                    {selectedAdjustmentStock ??
+                                        0}{' '}
+                                    adet
+                                </strong>
+                            </div>
+                        )}
+
+                        <label className="form-field">
+                            <span>Düzeltme tarihi</span>
+
+                            <input
+                                type="date"
+                                value={adjustmentDate}
+                                onChange={(event) =>
+                                    setAdjustmentDate(
+                                        event.target.value,
+                                    )
+                                }
+                                required
+                            />
+                        </label>
+
+                        <div className="form-row">
+                            <label className="form-field">
+                                <span>Adet</span>
+
+                                <input
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    value={adjustmentQuantity}
+                                    onChange={(event) =>
+                                        setAdjustmentQuantity(
+                                            event.target.value,
+                                        )
+                                    }
+                                    placeholder="Örn. 3"
+                                    required
+                                />
+                            </label>
+
+                            {adjustmentDirection ===
+                                'increase' && (
+                                    <label className="form-field">
+                                        <span>
+                                            Birim maliyet
+                                        </span>
+
+                                        <input
+                                            type="text"
+                                            inputMode="decimal"
+                                            value={
+                                                adjustmentUnitCost
+                                            }
+                                            onChange={(event) =>
+                                                setAdjustmentUnitCost(
+                                                    event.target
+                                                        .value,
+                                                )
+                                            }
+                                            placeholder="Örn. 45,00"
+                                            required
+                                        />
+                                    </label>
+                                )}
+                        </div>
+
+                        <label className="form-field">
+                            <span>Neden</span>
+
+                            <input
+                                type="text"
+                                value={adjustmentReason}
+                                onChange={(event) =>
+                                    setAdjustmentReason(
+                                        event.target.value,
+                                    )
+                                }
+                                placeholder={
+                                    adjustmentDirection ===
+                                        'increase'
+                                        ? 'Örn. Sayım fazlası'
+                                        : 'Örn. Hasarlı ürün'
+                                }
+                                required
+                            />
+                        </label>
+
+                        <label className="form-field">
+                            <span>Not</span>
+
+                            <input
+                                type="text"
+                                value={adjustmentNote}
+                                onChange={(event) =>
+                                    setAdjustmentNote(
+                                        event.target.value,
+                                    )
+                                }
+                                placeholder="İsteğe bağlı"
+                            />
+                        </label>
+
+                        <button
+                            className="primary-button"
+                            type="submit"
+                        >
+                            {adjustmentDirection ===
+                                'increase' ? (
+                                <Plus size={18} />
+                            ) : (
+                                <Minus size={18} />
+                            )}
+
+                            {adjustmentDirection ===
+                                'increase'
+                                ? 'Stok Artışını Kaydet'
+                                : 'Stok Azalışını Kaydet'}
+                        </button>
+                    </form>
+                </article>
+
+                <article className="dashboard-panel">
+                    <div className="panel-header inventory-history-header">
+                        <div>
+                            <h2>Düzeltme Geçmişi</h2>
+
+                            <p>
+                                {filteredAdjustments.length} /{' '}
+                                {adjustments.length} düzeltme
+                                kaydı gösteriliyor.
+                            </p>
+                        </div>
+
+                        <label className="inventory-search-field inventory-history-search">
+                            <Search size={16} />
+
+                            <input
+                                type="search"
+                                value={adjustmentSearch}
+                                onChange={(event) =>
+                                    setAdjustmentSearch(
+                                        event.target.value,
+                                    )
+                                }
+                                placeholder="Düzeltmelerde ara..."
+                            />
+                        </label>
+                    </div>
+
+                    {adjustments.length === 0 ? (
+                        <div className="empty-state empty-state-compact">
+                            <div className="empty-state-icon">
+                                <History
+                                    size={30}
+                                    strokeWidth={1.5}
+                                />
+                            </div>
+
+                            <div>
+                                <strong>
+                                    Henüz stok düzeltmesi yok
+                                </strong>
+
+                                <p>
+                                    Sayım farkı, hasar veya
+                                    benzeri durumları soldaki
+                                    formdan kaydedebilirsiniz.
+                                </p>
+                            </div>
+                        </div>
+                    ) : filteredAdjustments.length === 0 ? (
+                        <div className="inventory-filter-empty">
+                            <strong>
+                                Aramayla eşleşen düzeltme yok
+                            </strong>
+
+                            <span>
+                                Ürün, SKU, neden, not veya
+                                tarih ile arayabilirsiniz.
+                            </span>
+                        </div>
+                    ) : (
+                        <div className="adjustment-history-list">
+                            {filteredAdjustments.map(
+                                (record) => (
+                                    <div
+                                        key={
+                                            record.adjustment.id
+                                        }
+                                        className="adjustment-history-item"
+                                    >
+                                        <div className="adjustment-history-main">
+                                            <div className="adjustment-history-title">
+                                                <span
+                                                    className={`inventory-adjustment-badge ${record.adjustment.direction ===
+                                                        'increase'
+                                                        ? 'inventory-adjustment-increase'
+                                                        : 'inventory-adjustment-decrease'
+                                                        }`}
+                                                >
+                                                    {getAdjustmentDirectionLabel(
+                                                        record.adjustment.direction,
+                                                    )}
+                                                </span>
+
+                                                <strong>
+                                                    {record.productName}
+                                                </strong>
+
+                                                {record.productSku && (
+                                                    <span className="adjustment-history-sku">
+                                                        {record.productSku}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <div className="adjustment-history-meta">
+                                                <span>
+                                                    {formatDate(
+                                                        record.adjustment.adjustmentDate,
+                                                    )}
+                                                </span>
+
+                                                <span>
+                                                    {record.adjustment.reason}
+                                                </span>
+
+                                                {record.adjustment.note && (
+                                                    <span>
+                                                        {record.adjustment.note}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="adjustment-history-values">
+                                            <strong
+                                                className={
+                                                    record.adjustment.direction ===
+                                                        'increase'
+                                                        ? 'adjustment-quantity-positive'
+                                                        : 'adjustment-quantity-negative'
+                                                }
+                                            >
+                                                {record.adjustment.direction ===
+                                                    'increase'
+                                                    ? '+'
+                                                    : '-'}
+                                                {record.adjustment.quantity}
+                                            </strong>
+
+                                            <span>
+                                                {record.adjustment.direction ===
+                                                    'increase'
+                                                    ? 'Eklenen değer'
+                                                    : 'FIFO maliyeti'}
+                                            </span>
+
+                                            <strong>
+                                                {formatMoneyFromMinor(
+                                                    record.valueMinor,
+                                                )}
+                                            </strong>
+                                        </div>
+                                    </div>
+                                ),
+                            )}
+                        </div>
+                    )}
+                </article>
+            </section>
+
             <section className="dashboard-panel inventory-lots-panel">
                 <div className="panel-header inventory-history-header">
                     <div>
-                        <h2>Stok Geçmişi</h2>
+                        <h2>Stok Parti Geçmişi</h2>
 
                         <p>
                             {filteredLots.length} /{' '}
-                            {lots.length} stok kaydı
-                            gösteriliyor.
+                            {lots.length} FIFO parti girişi
+                            gösteriliyor. Azalışlar yukarıdaki
+                            Düzeltme Geçmişi'nde tutulur.
                         </p>
                     </div>
 
@@ -910,11 +1497,9 @@ function InventoryPage() {
                                         <tr key={lot.id}>
                                             <td>
                                                 <span
-                                                    className={`inventory-type-badge ${lot.entryType ===
-                                                        'opening'
-                                                        ? 'inventory-type-opening'
-                                                        : 'inventory-type-purchase'
-                                                        }`}
+                                                    className={`inventory-type-badge ${getEntryTypeBadgeClass(
+                                                        lot.entryType,
+                                                    )}`}
                                                 >
                                                     {getEntryTypeLabel(
                                                         lot.entryType,
