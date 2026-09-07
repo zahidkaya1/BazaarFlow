@@ -1,6 +1,7 @@
 import Dexie, { type Table } from 'dexie'
 import type { Category } from '../types/category'
 import type { InventoryLot } from '../types/inventoryLot'
+import type { AppSettings } from '../types/appSettings'
 import type {
     InventoryAdjustment,
     InventoryAdjustmentAllocation,
@@ -13,6 +14,7 @@ import type {
 } from '../types/sale'
 
 class BazaarFlowDatabase extends Dexie {
+    appSettings!: Table<AppSettings, string>
     categories!: Table<Category, string>
     products!: Table<Product, string>
     inventoryLots!: Table<InventoryLot, string>
@@ -112,6 +114,35 @@ class BazaarFlowDatabase extends Dexie {
 
             inventoryAdjustmentAllocations:
                 '&id, adjustmentId, inventoryLotId, [adjustmentId+inventoryLotId], createdAt',
+        })
+
+        this.version(6).stores({
+            categories:
+                '&id, name, isActive, createdAt, updatedAt',
+
+            products:
+                '&id, name, sku, categoryId, isActive, createdAt, updatedAt',
+
+            inventoryLots:
+                '&id, productId, entryType, sourceAdjustmentId, purchaseDate, quantityRemaining, [productId+purchaseDate], [productId+entryType], createdAt, updatedAt',
+
+            sales:
+                '&id, saleDate, status, createdAt, updatedAt',
+
+            saleItems:
+                '&id, saleId, productId, [saleId+productId], createdAt, updatedAt',
+
+            inventoryAllocations:
+                '&id, saleItemId, inventoryLotId, [saleItemId+inventoryLotId], createdAt',
+
+            inventoryAdjustments:
+                '&id, productId, adjustmentDate, direction, [productId+adjustmentDate], [productId+direction], createdAt, updatedAt',
+
+            inventoryAdjustmentAllocations:
+                '&id, adjustmentId, inventoryLotId, [adjustmentId+inventoryLotId], createdAt',
+
+            appSettings:
+                '&id',
         })
     }
 }
