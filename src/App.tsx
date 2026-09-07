@@ -3,9 +3,9 @@ import InventoryPage from './pages/InventoryPage'
 import SalesPage from './pages/SalesPage'
 import ReportsPage from './pages/ReportsPage'
 import { Route, Routes } from 'react-router-dom'
-import PlaceholderPage from './components/common/PlaceholderPage'
 import Sidebar from './components/layout/Sidebar'
 import DashboardPage from './pages/DashboardPage'
+import SettingsPage from './pages/SettingsPage'
 
 function App() {
   return (
@@ -27,13 +27,9 @@ function App() {
 
           <Route
             path="/settings"
-            element={
-              <PlaceholderPage
-                title="Ayarlar"
-                description="BazaarFlow uygulama tercihlerini yönetin."
-              />
-            }
+            element={<SettingsPage />}
           />
+
         </Routes>
       </main>
     </div>

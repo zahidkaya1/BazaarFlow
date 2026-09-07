@@ -12,7 +12,8 @@
  * 08. Dashboard
  * 09. Raporlar
  * 10. Stok düzeltmeleri
- * 11. Responsive
+ * 11. Ayarlar
+ * 12. Responsive
  */
 
 :root {
@@ -2343,7 +2344,212 @@ textarea:focus-visible {
   font-size: 12px;
 }
 
-/* ===== 11. RESPONSIVE ===== */
+/* ===== 11. AYARLAR ===== */
+
+.settings-info-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+
+  margin-bottom: 18px;
+  padding: 16px 18px;
+
+  border: 1px solid #a7f3d0;
+  border-radius: 12px;
+
+  background: var(--color-primary-soft);
+}
+
+.settings-info-icon {
+  width: 38px;
+  height: 38px;
+
+  display: grid;
+  place-items: center;
+
+  flex-shrink: 0;
+
+  border-radius: 10px;
+
+  background: var(--color-surface);
+  color: var(--color-secondary);
+}
+
+.settings-info-card strong {
+  color: var(--color-text);
+
+  font-size: 13px;
+}
+
+.settings-info-card p {
+  margin: 5px 0 0;
+
+  color: var(--color-text-muted);
+
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.settings-panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  padding-top: 20px;
+}
+
+.settings-feature-list {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.settings-feature-list span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  color: var(--color-text-muted);
+
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.settings-feature-list svg {
+  flex-shrink: 0;
+
+  color: var(--color-secondary);
+}
+
+.settings-helper-text {
+  margin: 0;
+
+  color: var(--color-text-soft);
+
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.settings-file-input {
+  display: none;
+}
+
+.settings-danger-box {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  padding: 12px 14px;
+
+  border: 1px solid #fed7aa;
+  border-radius: 9px;
+
+  background: #fff7ed;
+}
+
+.settings-danger-box strong {
+  color: #9a3412;
+
+  font-size: 11px;
+}
+
+.settings-danger-box span {
+  color: #c2410c;
+
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.settings-backup-preview {
+  margin-top: 18px;
+}
+
+.settings-preview-meta {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 12px;
+
+  padding: 18px 0;
+}
+
+.settings-preview-meta>div,
+.settings-backup-counts>div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  min-width: 0;
+
+  padding: 12px;
+
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+
+  background: var(--color-background);
+}
+
+.settings-preview-meta span,
+.settings-backup-counts span {
+  color: var(--color-text-soft);
+
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.settings-preview-meta strong,
+.settings-backup-counts strong {
+  overflow: hidden;
+
+  color: var(--color-text);
+
+  font-size: 11px;
+
+  text-overflow: ellipsis;
+}
+
+.settings-backup-counts {
+  display: grid;
+  grid-template-columns:
+    repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.settings-backup-counts strong {
+  color: var(--color-secondary);
+
+  font-size: 18px;
+}
+
+.settings-restore-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 9px;
+
+  margin-top: 18px;
+  padding-top: 18px;
+
+  border-top: 1px solid var(--color-border);
+}
+
+.settings-restore-button {
+  background: #b91c1c;
+}
+
+.settings-restore-button:hover {
+  background: #991b1b;
+}
+
+/* ===== 12. RESPONSIVE ===== */
 
 /* ----- Tablet / dar masaüstü ----- */
 
@@ -2401,6 +2607,16 @@ textarea:focus-visible {
   .reports-leader-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+.settings-backup-counts {
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+}
+
+.settings-preview-meta {
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
 }
 
 /* ----- Mobil ----- */
@@ -2585,5 +2801,20 @@ textarea:focus-visible {
 
   .reports-period-button:last-child {
     grid-column: 1 / -1;
+  }
+
+  .settings-grid,
+  .settings-preview-meta,
+  .settings-backup-counts,
+  .settings-feature-list {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-restore-actions {
+    flex-direction: column-reverse;
+  }
+
+  .settings-restore-actions button {
+    width: 100%;
   }
 }
