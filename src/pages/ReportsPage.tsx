@@ -11,6 +11,18 @@ import {
     WalletCards,
     Warehouse,
 } from 'lucide-react'
+import {
+    Bar,
+    BarChart,
+    CartesianGrid,
+    Legend,
+    Line,
+    LineChart,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from 'recharts'
 import { inventoryService } from '../services/inventoryService'
 import { productService } from '../services/productService'
 import {
@@ -27,6 +39,10 @@ type ReportPeriod =
     | 'month'
     | 'year'
     | 'custom'
+
+type DailyChartMode =
+    | 'bar'
+    | 'line'
 
 type ProductReportRow = {
     productId: string
@@ -50,6 +66,12 @@ type DailyReportRow = {
     discountMinor: number
 }
 
+type TrendChartPoint = {
+    label: string
+    revenueMinor: number
+    grossProfitMinor: number
+}
+
 function formatDateValue(date: Date): string {
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -62,6 +84,316 @@ function formatDisplayDate(value: string): string {
     const [year, month, day] = value.split('-')
 
     return `${day}.${month}.${year}`
+}
+
+function formatShortDisplayDate(
+    value: string,
+): string {
+    const [, month, day] = value.split('-')
+
+    return `${day}.${month}`
+}
+
+function formatChartProductName(
+    value: string,
+): string {
+    if (value.length <= 16) {
+        return value
+    }
+
+    return `${value.slice(0, 14)}…`
+}
+
+function renderChartLegend() {
+    return (
+        <div
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexWrap: 'wrap',
+                gap: '10px 18px',
+                paddingTop: 8,
+                color: 'var(--color-text-muted)',
+                fontSize: 13,
+            }}
+        >
+            <span
+                style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                }}
+            >
+                <span
+                    style={{
+                        width: 11,
+                        height: 11,
+                        borderRadius: 3,
+                        background:
+                            'var(--color-secondary)',
+                    }}
+                />
+                Ciro
+            </span>
+
+            <span
+                style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                }}
+            >
+                <span
+                    style={{
+                        width: 11,
+                        height: 11,
+                        borderRadius: 3,
+                        background:
+                            'var(--color-primary)',
+                    }}
+                />
+                Brüt Kâr
+            </span>
+        </div>
+    )
+}
+
+function getDateValuesInRange(
+    start: string,
+    end: string,
+): string[] {
+    const [startYear, startMonth, startDay] =
+        start.split('-').map(Number)
+
+    const [endYear, endMonth, endDay] =
+        end.split('-').map(Number)
+
+    const current = new Date(
+        startYear,
+        startMonth - 1,
+        startDay,
+    )
+
+    const last = new Date(
+        endYear,
+        endMonth - 1,
+        endDay,
+    )
+
+    const values: string[] = []
+
+    while (current <= last) {
+        values.push(formatDateValue(current))
+
+        current.setDate(
+            current.getDate() + 1,
+        )
+    }
+
+    return values
+}
+
+function sumDailyRows(
+    dailyRows: Map<string, DailyReportRow>,
+    dateValues: string[],
+): {
+    revenueMinor: number
+    grossProfitMinor: number
+} {
+    return dateValues.reduce(
+        (totals, dateValue) => {
+            const row =
+                dailyRows.get(dateValue)
+
+            totals.revenueMinor +=
+                row?.revenueMinor ?? 0
+
+            totals.grossProfitMinor +=
+                row?.grossProfitMinor ?? 0
+
+            return totals
+        },
+        {
+            revenueMinor: 0,
+            grossProfitMinor: 0,
+        },
+    )
+}
+
+function getMonthShortLabel(
+    month: number,
+): string {
+    const labels = [
+        'Oca',
+        'Şub',
+        'Mar',
+        'Nis',
+        'May',
+        'Haz',
+        'Tem',
+        'Ağu',
+        'Eyl',
+        'Eki',
+        'Kas',
+        'Ara',
+    ]
+
+    return labels[month - 1] ?? ''
+}
+
+function createDailyTrendData(
+    dailyRows: Map<string, DailyReportRow>,
+    start: string,
+    end: string,
+): TrendChartPoint[] {
+    return getDateValuesInRange(
+        start,
+        end,
+    ).map((saleDate) => {
+        const day =
+            dailyRows.get(saleDate)
+
+        return {
+            label:
+                formatShortDisplayDate(
+                    saleDate,
+                ),
+            revenueMinor:
+                day?.revenueMinor ?? 0,
+            grossProfitMinor:
+                day?.grossProfitMinor ?? 0,
+        }
+    })
+}
+
+function createMonthlyWeekTrendData(
+    dailyRows: Map<string, DailyReportRow>,
+    start: string,
+    end: string,
+): TrendChartPoint[] {
+    const dateValues =
+        getDateValuesInRange(
+            start,
+            end,
+        )
+
+    const [, monthValue] =
+        start.split('-')
+
+    const month =
+        Number(monthValue)
+
+    const monthLabel =
+        getMonthShortLabel(month)
+
+    const points: TrendChartPoint[] = []
+
+    for (
+        let index = 0;
+        index < dateValues.length;
+        index += 7
+    ) {
+        const bucket =
+            dateValues.slice(
+                index,
+                index + 7,
+            )
+
+        const firstDate =
+            bucket[0]
+
+        const lastDate =
+            bucket[bucket.length - 1]
+
+        if (!firstDate || !lastDate) {
+            continue
+        }
+
+        const firstDay =
+            Number(
+                firstDate.slice(8, 10),
+            )
+
+        const lastDay =
+            Number(
+                lastDate.slice(8, 10),
+            )
+
+        const totals =
+            sumDailyRows(
+                dailyRows,
+                bucket,
+            )
+
+        points.push({
+            label:
+                `${firstDay}–${lastDay} ${monthLabel}`,
+            revenueMinor:
+                totals.revenueMinor,
+            grossProfitMinor:
+                totals.grossProfitMinor,
+        })
+    }
+
+    return points
+}
+
+function createYearlyMonthTrendData(
+    dailyRows: Map<string, DailyReportRow>,
+    start: string,
+): TrendChartPoint[] {
+    const [yearValue] =
+        start.split('-')
+
+    const year =
+        Number(yearValue)
+
+    return Array.from(
+        { length: 12 },
+        (_, monthIndex) => {
+            const month =
+                monthIndex + 1
+
+            const firstDay =
+                new Date(
+                    year,
+                    monthIndex,
+                    1,
+                )
+
+            const lastDay =
+                new Date(
+                    year,
+                    month,
+                    0,
+                )
+
+            const totals =
+                sumDailyRows(
+                    dailyRows,
+                    getDateValuesInRange(
+                        formatDateValue(
+                            firstDay,
+                        ),
+                        formatDateValue(
+                            lastDay,
+                        ),
+                    ),
+                )
+
+            return {
+                label:
+                    getMonthShortLabel(
+                        month,
+                    ),
+                revenueMinor:
+                    totals.revenueMinor,
+                grossProfitMinor:
+                    totals.grossProfitMinor,
+            }
+        },
+    )
 }
 
 function getTodayDateValue(): string {
@@ -312,6 +644,14 @@ function ReportsPage() {
 
     const [productSearch, setProductSearch] =
         useState('')
+
+    const [dailyChartMode, setDailyChartMode] =
+        useState<DailyChartMode>('bar')
+
+    const effectiveDailyChartMode: DailyChartMode =
+        period === 'today'
+            ? 'bar'
+            : dailyChartMode
 
     const productMap = useMemo(
         () =>
@@ -580,6 +920,85 @@ function ReportsPage() {
                     first.saleDate,
                 ),
         )
+
+    const dailyChartData: TrendChartPoint[] =
+        period === 'month'
+            ? effectiveDailyChartMode === 'bar'
+                ? createMonthlyWeekTrendData(
+                    dailyRows,
+                    reportRange.start,
+                    reportRange.end,
+                )
+                : createDailyTrendData(
+                    dailyRows,
+                    reportRange.start,
+                    reportRange.end,
+                )
+            : period === 'year'
+                ? createYearlyMonthTrendData(
+                    dailyRows,
+                    reportRange.start,
+                )
+                : createDailyTrendData(
+                    dailyRows,
+                    reportRange.start,
+                    reportRange.end,
+                )
+
+    const dailyChartDescription =
+        period === 'month'
+            ? effectiveDailyChartMode === 'bar'
+                ? 'Seçilen ayın haftalık ciro ve brüt kâr karşılaştırması.'
+                : 'Seçilen ayın günlük ciro ve brüt kâr eğilimi.'
+            : period === 'year'
+                ? 'Seçilen yılın aylık ciro ve brüt kâr eğilimi.'
+                : period === 'week'
+                    ? 'Haftanın 7 günündeki ciro ve brüt kâr değişimi.'
+                    : 'Seçilen dönemde ciro ve brüt kâr değişimi.'
+
+    const dailyChartMaxBarSize =
+        period === 'today'
+            ? 90
+            : period === 'week'
+                ? 38
+                : period === 'month'
+                    ? 52
+                    : period === 'year'
+                        ? 28
+                        : 38
+
+    const dailyChartCategoryGap =
+        period === 'week'
+            ? '14%'
+            : period === 'month'
+                ? '18%'
+                : period === 'year'
+                    ? '22%'
+                    : '28%'
+
+    const dailyChartXAxisInterval =
+        period === 'month' &&
+            effectiveDailyChartMode === 'line'
+            ? 4
+            : 0
+
+    const productChartData =
+        [...productPerformance]
+            .sort(
+                (first, second) =>
+                    second.revenueMinor -
+                    first.revenueMinor,
+            )
+            .slice(0, 6)
+            .map((item) => ({
+                productId: item.productId,
+                productName:
+                    item.productName,
+                revenueMinor:
+                    item.revenueMinor,
+                grossProfitMinor:
+                    item.grossProfitMinor,
+            }))
 
     const bestSeller =
         [...productPerformance].sort(
@@ -1068,6 +1487,533 @@ function ReportsPage() {
                     <small>
                         Bugünkü elde kalan stok
                     </small>
+                </article>
+            </section>
+
+            <section className="reports-chart-grid">
+                <article className="dashboard-panel reports-chart-panel">
+                    <div className="panel-header">
+                        <div>
+                            <h2>
+                                Ciro & Brüt Kâr Eğilimi
+                            </h2>
+
+                            <p>
+                                {dailyChartDescription}
+                            </p>
+                        </div>
+
+                        <div
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 10,
+                            }}
+                        >
+                            {period !== 'today' && (
+                                <div
+                                    role="group"
+                                    aria-label="Grafik görünümü"
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 4,
+                                        padding: 3,
+                                        border:
+                                            '1px solid var(--color-border)',
+                                        borderRadius: 10,
+                                        background:
+                                            'var(--color-surface-subtle, transparent)',
+                                    }}
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setDailyChartMode(
+                                                'bar',
+                                            )
+                                        }
+                                        aria-pressed={
+                                            effectiveDailyChartMode ===
+                                            'bar'
+                                        }
+                                        style={{
+                                            border: 'none',
+                                            borderRadius: 7,
+                                            padding:
+                                                '6px 10px',
+                                            cursor: 'pointer',
+                                            font: 'inherit',
+                                            fontSize: 12,
+                                            fontWeight: 600,
+                                            color:
+                                                effectiveDailyChartMode ===
+                                                    'bar'
+                                                    ? 'var(--color-text)'
+                                                    : 'var(--color-text-muted)',
+                                            background:
+                                                effectiveDailyChartMode ===
+                                                    'bar'
+                                                    ? 'var(--color-surface)'
+                                                    : 'transparent',
+                                            boxShadow:
+                                                effectiveDailyChartMode ===
+                                                    'bar'
+                                                    ? '0 1px 3px rgba(15, 23, 42, 0.10)'
+                                                    : 'none',
+                                        }}
+                                    >
+                                        Sütun
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setDailyChartMode(
+                                                'line',
+                                            )
+                                        }
+                                        aria-pressed={
+                                            effectiveDailyChartMode ===
+                                            'line'
+                                        }
+                                        style={{
+                                            border: 'none',
+                                            borderRadius: 7,
+                                            padding:
+                                                '6px 10px',
+                                            cursor: 'pointer',
+                                            font: 'inherit',
+                                            fontSize: 12,
+                                            fontWeight: 600,
+                                            color:
+                                                effectiveDailyChartMode ===
+                                                    'line'
+                                                    ? 'var(--color-text)'
+                                                    : 'var(--color-text-muted)',
+                                            background:
+                                                effectiveDailyChartMode ===
+                                                    'line'
+                                                    ? 'var(--color-surface)'
+                                                    : 'transparent',
+                                            boxShadow:
+                                                effectiveDailyChartMode ===
+                                                    'line'
+                                                    ? '0 1px 3px rgba(15, 23, 42, 0.10)'
+                                                    : 'none',
+                                        }}
+                                    >
+                                        Çizgi
+                                    </button>
+                                </div>
+                            )}
+
+                            <TrendingUp size={19} />
+                        </div>
+                    </div>
+
+                    {dailyPerformance.length === 0 ? (
+                        <div className="empty-state empty-state-compact">
+                            <TrendingUp
+                                size={30}
+                                strokeWidth={1.5}
+                            />
+
+                            <div>
+                                <strong>
+                                    Grafik verisi bulunamadı
+                                </strong>
+
+                                <p>
+                                    Seçilen dönemde tamamlanan
+                                    satış bulunmuyor.
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="reports-chart-container">
+                            <ResponsiveContainer
+                                width="100%"
+                                height="100%"
+                            >
+                                {effectiveDailyChartMode === 'bar' ? (
+                                    <BarChart
+                                        data={dailyChartData}
+                                        margin={{
+                                            top: 8,
+                                            right: 12,
+                                            left: 4,
+                                            bottom: 8,
+                                        }}
+                                        barCategoryGap={
+                                            dailyChartCategoryGap
+                                        }
+                                        barGap={5}
+                                    >
+                                        <CartesianGrid
+                                            strokeDasharray="3 3"
+                                            vertical={false}
+                                        />
+
+                                        <XAxis
+                                            dataKey="label"
+                                            interval={
+                                                dailyChartXAxisInterval
+                                            }
+                                            minTickGap={8}
+                                            tick={{
+                                                fontSize: 10,
+                                            }}
+                                            tickLine={false}
+                                            axisLine={false}
+                                        />
+
+                                        <YAxis
+                                            tickFormatter={(value) =>
+                                                formatMoneyFromMinor(
+                                                    Number(value),
+                                                )
+                                            }
+                                            tick={{
+                                                fontSize: 10,
+                                            }}
+                                            tickLine={false}
+                                            axisLine={false}
+                                            width={78}
+                                        />
+
+                                        <Tooltip
+                                            labelFormatter={(label) =>
+                                                String(label)
+                                            }
+                                            formatter={(
+                                                value,
+                                                name,
+                                            ) => [
+                                                    formatMoneyFromMinor(
+                                                        Number(value),
+                                                    ),
+                                                    String(name),
+                                                ]}
+                                            contentStyle={{
+                                                background:
+                                                    'var(--color-surface)',
+                                                border:
+                                                    '1px solid var(--color-border)',
+                                                borderRadius:
+                                                    '10px',
+                                                boxShadow:
+                                                    '0 8px 24px rgba(15, 23, 42, 0.12)',
+                                            }}
+                                            labelStyle={{
+                                                color:
+                                                    'var(--color-text)',
+                                                fontWeight: 600,
+                                            }}
+                                            itemStyle={{
+                                                color:
+                                                    'var(--color-text)',
+                                            }}
+                                        />
+
+                                        <Legend
+                                            content={() =>
+                                                renderChartLegend()
+                                            }
+                                        />
+
+                                        <Bar
+                                            dataKey="revenueMinor"
+                                            name="Ciro"
+                                            fill="var(--color-secondary)"
+                                            radius={[
+                                                6,
+                                                6,
+                                                0,
+                                                0,
+                                            ]}
+                                            maxBarSize={
+                                                dailyChartMaxBarSize
+                                            }
+                                        />
+
+                                        <Bar
+                                            dataKey="grossProfitMinor"
+                                            name="Brüt Kâr"
+                                            fill="var(--color-primary)"
+                                            radius={[
+                                                6,
+                                                6,
+                                                0,
+                                                0,
+                                            ]}
+                                            maxBarSize={
+                                                dailyChartMaxBarSize
+                                            }
+                                        />
+                                    </BarChart>
+                                ) : (
+                                    <LineChart
+                                        data={dailyChartData}
+                                        margin={{
+                                            top: 8,
+                                            right: 12,
+                                            left: 4,
+                                            bottom: 4,
+                                        }}
+                                    >
+                                        <CartesianGrid
+                                            strokeDasharray="3 3"
+                                            vertical={false}
+                                        />
+
+                                        <XAxis
+                                            dataKey="label"
+                                            interval={
+                                                dailyChartXAxisInterval
+                                            }
+                                            minTickGap={8}
+                                            tick={{
+                                                fontSize: 10,
+                                            }}
+                                            tickLine={false}
+                                            axisLine={false}
+                                        />
+
+                                        <YAxis
+                                            tickFormatter={(value) =>
+                                                formatMoneyFromMinor(
+                                                    Number(value),
+                                                )
+                                            }
+                                            tick={{
+                                                fontSize: 10,
+                                            }}
+                                            tickLine={false}
+                                            axisLine={false}
+                                            width={78}
+                                        />
+
+                                        <Tooltip
+                                            labelFormatter={(label) =>
+                                                String(label)
+                                            }
+                                            formatter={(
+                                                value,
+                                                name,
+                                            ) => [
+                                                    formatMoneyFromMinor(
+                                                        Number(value),
+                                                    ),
+                                                    String(name),
+                                                ]}
+                                            contentStyle={{
+                                                background:
+                                                    'var(--color-surface)',
+                                                border:
+                                                    '1px solid var(--color-border)',
+                                                borderRadius:
+                                                    '10px',
+                                                boxShadow:
+                                                    '0 8px 24px rgba(15, 23, 42, 0.12)',
+                                            }}
+                                            labelStyle={{
+                                                color:
+                                                    'var(--color-text)',
+                                                fontWeight: 600,
+                                            }}
+                                            itemStyle={{
+                                                color:
+                                                    'var(--color-text)',
+                                            }}
+                                        />
+
+                                        <Legend
+                                            content={() =>
+                                                renderChartLegend()
+                                            }
+                                        />
+
+                                        <Line
+                                            type="monotone"
+                                            dataKey="revenueMinor"
+                                            name="Ciro"
+                                            stroke="var(--color-secondary)"
+                                            strokeWidth={2}
+                                            dot={{
+                                                r: 3,
+                                            }}
+                                            activeDot={{
+                                                r: 5,
+                                            }}
+                                        />
+
+                                        <Line
+                                            type="monotone"
+                                            dataKey="grossProfitMinor"
+                                            name="Brüt Kâr"
+                                            stroke="var(--color-primary)"
+                                            strokeWidth={2}
+                                            dot={{
+                                                r: 3,
+                                            }}
+                                            activeDot={{
+                                                r: 5,
+                                            }}
+                                        />
+                                    </LineChart>
+                                )}
+                            </ResponsiveContainer>
+                        </div>
+                    )}
+                </article>
+
+                <article className="dashboard-panel reports-chart-panel">
+                    <div className="panel-header">
+                        <div>
+                            <h2>
+                                Ürün Ciro & Kâr Karşılaştırması
+                            </h2>
+
+                            <p>
+                                Cirosu en yüksek ilk 6
+                                ürünün performansı.
+                            </p>
+                        </div>
+
+                        <Trophy size={19} />
+                    </div>
+
+                    {productChartData.length === 0 ? (
+                        <div className="empty-state empty-state-compact">
+                            <Trophy
+                                size={30}
+                                strokeWidth={1.5}
+                            />
+
+                            <div>
+                                <strong>
+                                    Ürün verisi bulunamadı
+                                </strong>
+
+                                <p>
+                                    Dönemi veya ürün filtresini
+                                    değiştirebilirsiniz.
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="reports-chart-container">
+                            <ResponsiveContainer
+                                width="100%"
+                                height="100%"
+                            >
+                                <BarChart
+                                    data={productChartData}
+                                    margin={{
+                                        top: 8,
+                                        right: 12,
+                                        left: 4,
+                                        bottom: 8,
+                                    }}
+                                >
+                                    <CartesianGrid
+                                        strokeDasharray="3 3"
+                                        vertical={false}
+                                    />
+
+                                    <XAxis
+                                        dataKey="productName"
+                                        tickFormatter={
+                                            formatChartProductName
+                                        }
+                                        interval={0}
+                                        height={44}
+                                        tick={{
+                                            fontSize: 10,
+                                        }}
+                                        tickLine={false}
+                                        axisLine={false}
+                                    />
+
+                                    <YAxis
+                                        tickFormatter={(value) =>
+                                            formatMoneyFromMinor(
+                                                Number(value),
+                                            )
+                                        }
+                                        tick={{
+                                            fontSize: 10,
+                                        }}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        width={78}
+                                    />
+
+                                    <Tooltip
+                                        formatter={(
+                                            value,
+                                            name,
+                                        ) => [
+                                                formatMoneyFromMinor(
+                                                    Number(value),
+                                                ),
+                                                String(name),
+                                            ]}
+                                        contentStyle={{
+                                            background:
+                                                'var(--color-surface)',
+                                            border:
+                                                '1px solid var(--color-border)',
+                                            borderRadius:
+                                                '10px',
+                                            boxShadow:
+                                                '0 8px 24px rgba(15, 23, 42, 0.12)',
+                                        }}
+                                        labelStyle={{
+                                            color:
+                                                'var(--color-text)',
+                                            fontWeight: 600,
+                                        }}
+                                        itemStyle={{
+                                            color:
+                                                'var(--color-text)',
+                                        }}
+                                    />
+
+                                    <Legend
+                                        content={() =>
+                                            renderChartLegend()
+                                        }
+                                    />
+
+                                    <Bar
+                                        dataKey="revenueMinor"
+                                        name="Ciro"
+                                        fill="var(--color-secondary)"
+                                        radius={[
+                                            4,
+                                            4,
+                                            0,
+                                            0,
+                                        ]}
+                                    />
+
+                                    <Bar
+                                        dataKey="grossProfitMinor"
+                                        name="Brüt Kâr"
+                                        fill="var(--color-primary)"
+                                        radius={[
+                                            4,
+                                            4,
+                                            0,
+                                            0,
+                                        ]}
+                                    />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    )}
                 </article>
             </section>
 
