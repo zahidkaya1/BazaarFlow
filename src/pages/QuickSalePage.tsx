@@ -28,6 +28,8 @@ type QuickSaleCartEntry = {
 
 type QuickSaleCart = Record<string, QuickSaleCartEntry>
 
+const QUICK_DISCOUNT_PRESETS_MINOR = [1000, 2000, 3000] as const
+
 function getTodayDateValue(): string {
     const now = new Date()
 
@@ -67,6 +69,7 @@ function QuickSalePage() {
     const [discountProductId, setDiscountProductId] = useState('')
     const [discountPrice, setDiscountPrice] = useState('')
     const [discountReason, setDiscountReason] = useState('')
+    const [quickDiscountMinor, setQuickDiscountMinor] = useState(0)
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
     const [isSaving, setIsSaving] = useState(false)
@@ -224,6 +227,7 @@ function QuickSalePage() {
         setDiscountProductId('')
         setDiscountPrice('')
         setDiscountReason('')
+        setQuickDiscountMinor(0)
     }
 
     function clearCart() {
@@ -243,6 +247,12 @@ function QuickSalePage() {
         setDiscountProductId(productId)
         setDiscountPrice(formatMoneyInput(entry.actualUnitPriceMinor))
         setDiscountReason(entry.discountReason ?? '')
+        setQuickDiscountMinor(
+            Math.max(
+                0,
+                product.defaultSalePriceMinor - entry.actualUnitPriceMinor,
+            ),
+        )
     }
 
     function openDiscountPanel() {
@@ -256,6 +266,53 @@ function QuickSalePage() {
 
         loadDiscountDraft(firstItem.product.id)
         setIsDiscountPanelOpen(true)
+    }
+
+    function openQuickDiscountPanel(productId: string) {
+        clearFeedback()
+        loadDiscountDraft(productId)
+        setIsDiscountPanelOpen(true)
+    }
+
+    function applyQuickDiscount() {
+        clearFeedback()
+
+        if (!selectedDiscountProduct) {
+            return
+        }
+
+        const currentEntry = cart[selectedDiscountProduct.id]
+
+        if (!currentEntry) {
+            return
+        }
+
+        if (
+            quickDiscountMinor < 0 ||
+            quickDiscountMinor > selectedDiscountProduct.defaultSalePriceMinor
+        ) {
+            setError('Seçilen indirim ürün fiyatından yüksek olamaz.')
+            return
+        }
+
+        const actualUnitPriceMinor =
+            selectedDiscountProduct.defaultSalePriceMinor - quickDiscountMinor
+
+        setCart((current) => ({
+            ...current,
+            [selectedDiscountProduct.id]: {
+                ...currentEntry,
+                actualUnitPriceMinor,
+                discountReason:
+                    quickDiscountMinor > 0
+                        ? `POS hızlı indirim: ${formatMoneyFromMinor(
+                            quickDiscountMinor,
+                        )}`
+                        : undefined,
+            },
+        }))
+
+        closeDiscountPanel()
     }
 
     function saveSpecialPrice() {
@@ -320,6 +377,7 @@ function QuickSalePage() {
             formatMoneyInput(selectedDiscountProduct.defaultSalePriceMinor),
         )
         setDiscountReason('')
+        setQuickDiscountMinor(0)
     }
 
     async function completeSale() {
@@ -555,6 +613,19 @@ function QuickSalePage() {
                                             </div>
                                         )}
 
+                                        <button
+                                            type="button"
+                                            className="quick-sale-mobile-discount-button"
+                                            onClick={() =>
+                                                openQuickDiscountPanel(product.id)
+                                            }
+                                        >
+                                            <Percent size={15} />
+                                            {hasSpecialPrice
+                                                ? 'İndirimi Değiştir'
+                                                : 'İndirim'}
+                                        </button>
+
                                         <div className="quick-sale-cart-item-bottom">
                                             <div className="quick-sale-quantity-control">
                                                 <button
@@ -638,7 +709,7 @@ function QuickSalePage() {
 
                         <button
                             type="button"
-                            className="quick-sale-discount-button"
+                            className="quick-sale-discount-button quick-sale-desktop-discount-button"
                             disabled={cartItems.length === 0 || isSaving}
                             onClick={openDiscountPanel}
                         >
@@ -702,31 +773,105 @@ function QuickSalePage() {
                             </button>
                         </div>
 
-                        <div className="quick-sale-discount-content">
-                            <div className="quick-sale-discount-products">
-                                {cartItems.map(({ product, entry }) => (
-                                    <button
-                                        key={product.id}
-                                        type="button"
-                                        className={
-                                            discountProductId === product.id
-                                                ? 'quick-sale-discount-product-active'
-                                                : ''
-                                        }
-                                        onClick={() =>
-                                            loadDiscountDraft(product.id)
-                                        }
-                                    >
-                                        <strong>{product.name}</strong>
-                                        <span>{entry.quantity} adet</span>
-                                    </button>
-                                ))}
+                        <div className="quick-sale-discount-desktop">
+                            <div className="quick-sale-discount-content">
+                                <div className="quick-sale-discount-products">
+                                    {cartItems.map(({ product, entry }) => (
+                                        <button
+                                            key={product.id}
+                                            type="button"
+                                            className={
+                                                discountProductId === product.id
+                                                    ? 'quick-sale-discount-product-active'
+                                                    : ''
+                                            }
+                                            onClick={() =>
+                                                loadDiscountDraft(product.id)
+                                            }
+                                        >
+                                            <strong>{product.name}</strong>
+                                            <span>{entry.quantity} adet</span>
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {selectedDiscountProduct && (
+                                    <>
+                                        <div className="quick-sale-list-price">
+                                            <span>Liste fiyatı</span>
+                                            <strong>
+                                                {formatMoneyFromMinor(
+                                                    selectedDiscountProduct.defaultSalePriceMinor,
+                                                )}
+                                            </strong>
+                                        </div>
+
+                                        <label className="quick-sale-discount-field">
+                                            <span>Satış fiyatı</span>
+                                            <input
+                                                type="text"
+                                                inputMode="decimal"
+                                                value={discountPrice}
+                                                onChange={(event) =>
+                                                    setDiscountPrice(
+                                                        event.target.value,
+                                                    )
+                                                }
+                                                placeholder="Örn. 55,00"
+                                            />
+                                        </label>
+
+                                        <label className="quick-sale-discount-field">
+                                            <span>
+                                                İndirim nedeni
+                                                <small>İsteğe bağlı</small>
+                                            </span>
+                                            <input
+                                                type="text"
+                                                value={discountReason}
+                                                onChange={(event) =>
+                                                    setDiscountReason(
+                                                        event.target.value,
+                                                    )
+                                                }
+                                                placeholder="Örn. Müşteri indirimi"
+                                            />
+                                        </label>
+                                    </>
+                                )}
                             </div>
 
+                            <div className="quick-sale-discount-actions">
+                                <button
+                                    type="button"
+                                    className="quick-sale-reset-price-button"
+                                    onClick={resetSelectedSpecialPrice}
+                                >
+                                    Liste Fiyatına Dön
+                                </button>
+
+                                <button
+                                    type="button"
+                                    className="quick-sale-save-price-button"
+                                    onClick={saveSpecialPrice}
+                                >
+                                    Fiyatı Uygula
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="quick-sale-discount-mobile">
                             {selectedDiscountProduct && (
                                 <>
-                                    <div className="quick-sale-list-price">
-                                        <span>Liste fiyatı</span>
+                                    <div className="quick-sale-mobile-discount-product">
+                                        <span>Ürün</span>
+                                        <strong>
+                                            {selectedDiscountProduct.name}
+                                        </strong>
+                                    </div>
+
+                                    <div className="quick-sale-mobile-discount-price-row">
+                                        <span>Normal fiyat</span>
                                         <strong>
                                             {formatMoneyFromMinor(
                                                 selectedDiscountProduct.defaultSalePriceMinor,
@@ -734,58 +879,70 @@ function QuickSalePage() {
                                         </strong>
                                     </div>
 
-                                    <label className="quick-sale-discount-field">
-                                        <span>Satış fiyatı</span>
-                                        <input
-                                            type="text"
-                                            inputMode="decimal"
-                                            value={discountPrice}
-                                            onChange={(event) =>
-                                                setDiscountPrice(
-                                                    event.target.value,
-                                                )
-                                            }
-                                            placeholder="Örn. 55,00"
-                                            autoFocus
-                                        />
-                                    </label>
+                                    <div className="quick-sale-mobile-discount-presets">
+                                        {QUICK_DISCOUNT_PRESETS_MINOR.map(
+                                            (presetMinor) => (
+                                                <button
+                                                    key={presetMinor}
+                                                    type="button"
+                                                    className={
+                                                        quickDiscountMinor ===
+                                                            presetMinor
+                                                            ? 'quick-sale-mobile-discount-preset-active'
+                                                            : ''
+                                                    }
+                                                    disabled={
+                                                        presetMinor >
+                                                        selectedDiscountProduct.defaultSalePriceMinor
+                                                    }
+                                                    onClick={() =>
+                                                        setQuickDiscountMinor(
+                                                            presetMinor,
+                                                        )
+                                                    }
+                                                >
+                                                    -
+                                                    {formatMoneyFromMinor(
+                                                        presetMinor,
+                                                    )}
+                                                </button>
+                                            ),
+                                        )}
+                                    </div>
 
-                                    <label className="quick-sale-discount-field">
-                                        <span>
-                                            İndirim nedeni
-                                            <small>İsteğe bağlı</small>
-                                        </span>
-                                        <input
-                                            type="text"
-                                            value={discountReason}
-                                            onChange={(event) =>
-                                                setDiscountReason(
-                                                    event.target.value,
-                                                )
-                                            }
-                                            placeholder="Örn. Müşteri indirimi"
-                                        />
-                                    </label>
+                                    <button
+                                        type="button"
+                                        className="quick-sale-mobile-discount-remove"
+                                        disabled={quickDiscountMinor === 0}
+                                        onClick={() =>
+                                            setQuickDiscountMinor(0)
+                                        }
+                                    >
+                                        İndirimi Kaldır
+                                    </button>
+
+                                    <div className="quick-sale-mobile-discount-preview">
+                                        <span>Yeni birim fiyat</span>
+                                        <strong>
+                                            {formatMoneyFromMinor(
+                                                Math.max(
+                                                    0,
+                                                    selectedDiscountProduct.defaultSalePriceMinor -
+                                                    quickDiscountMinor,
+                                                ),
+                                            )}
+                                        </strong>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        className="quick-sale-mobile-discount-confirm"
+                                        onClick={applyQuickDiscount}
+                                    >
+                                        ONAYLA
+                                    </button>
                                 </>
                             )}
-                        </div>
-
-                        <div className="quick-sale-discount-actions">
-                            <button
-                                type="button"
-                                className="quick-sale-reset-price-button"
-                                onClick={resetSelectedSpecialPrice}
-                            >
-                                Liste Fiyatına Dön
-                            </button>
-
-                            <button
-                                type="button"
-                                className="quick-sale-save-price-button"
-                                onClick={saveSpecialPrice}
-                            >
-                                Fiyatı Uygula
-                            </button>
                         </div>
                     </section>
                 </div>
