@@ -5,7 +5,9 @@ import {
     PackagePlus,
     Settings,
     ShoppingCart,
+    Zap,
 } from 'lucide-react'
+
 import { NavLink } from 'react-router-dom'
 
 const navigationItems = [
@@ -13,6 +15,11 @@ const navigationItems = [
         label: 'Genel Bakış',
         path: '/',
         icon: LayoutDashboard,
+    },
+    {
+        label: 'Hızlı Satış',
+        path: '/quick-sale',
+        icon: Zap,
     },
     {
         label: 'Satış',

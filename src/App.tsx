@@ -1,10 +1,11 @@
-import ProductsPage from './pages/ProductsPage'
-import InventoryPage from './pages/InventoryPage'
-import SalesPage from './pages/SalesPage'
-import ReportsPage from './pages/ReportsPage'
 import { Route, Routes } from 'react-router-dom'
 import Sidebar from './components/layout/Sidebar'
 import DashboardPage from './pages/DashboardPage'
+import InventoryPage from './pages/InventoryPage'
+import ProductsPage from './pages/ProductsPage'
+import QuickSalePage from './pages/QuickSalePage'
+import ReportsPage from './pages/ReportsPage'
+import SalesPage from './pages/SalesPage'
 import SettingsPage from './pages/SettingsPage'
 
 function App() {
@@ -14,11 +15,30 @@ function App() {
 
       <main className="main-content">
         <Routes>
-          <Route path="/" element={<DashboardPage />} />
+          <Route
+            path="/"
+            element={<DashboardPage />}
+          />
 
-          <Route path="/sales" element={<SalesPage />} />
-          <Route path="/inventory" element={<InventoryPage />} />
-          <Route path="/products" element={<ProductsPage />} />
+          <Route
+            path="/quick-sale"
+            element={<QuickSalePage />}
+          />
+
+          <Route
+            path="/sales"
+            element={<SalesPage />}
+          />
+
+          <Route
+            path="/inventory"
+            element={<InventoryPage />}
+          />
+
+          <Route
+            path="/products"
+            element={<ProductsPage />}
+          />
 
           <Route
             path="/reports"
@@ -29,7 +49,6 @@ function App() {
             path="/settings"
             element={<SettingsPage />}
           />
-
         </Routes>
       </main>
     </div>
