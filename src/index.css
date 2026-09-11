@@ -4653,3 +4653,243 @@ textarea:focus-visible {
     margin-bottom: 12px;
   }
 }
+
+/* ===== MOBİL DAHA FAZLA MERKEZİ ===== */
+
+.mobile-more-today,
+.mobile-more-tools {
+  margin-bottom: 18px;
+}
+
+.mobile-more-section-heading {
+  min-height: 38px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  margin-bottom: 10px;
+}
+
+.mobile-more-section-heading>div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mobile-more-section-heading>div>span {
+  color: var(--color-secondary);
+
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.8px;
+}
+
+.mobile-more-section-heading>div>strong {
+  color: var(--color-text);
+
+  font-size: 14px;
+}
+
+.mobile-more-summary-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+
+  color: var(--color-secondary);
+
+  font-size: 9px;
+  font-weight: 750;
+
+  text-decoration: none;
+}
+
+.mobile-more-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mobile-more-summary-card {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+
+  padding: 12px;
+
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.mobile-more-summary-icon {
+  width: 32px;
+  height: 32px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 9px;
+
+  background: var(--color-primary-soft);
+  color: var(--color-secondary);
+}
+
+.mobile-more-summary-card>div {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mobile-more-summary-card>div>span {
+  color: var(--color-text-muted);
+
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.mobile-more-summary-card>div>strong {
+  overflow: hidden;
+
+  color: var(--color-text);
+
+  font-size: 13px;
+  letter-spacing: -0.15px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-more-summary-card>div>small {
+  color: var(--color-text-soft);
+
+  font-size: 8px;
+}
+
+.mobile-more-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.mobile-more-item {
+  min-height: 92px;
+
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+
+  padding: 14px;
+
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+
+  background: var(--color-surface);
+  color: var(--color-text);
+
+  text-decoration: none;
+
+  box-shadow: var(--shadow-card);
+}
+
+.mobile-more-item-icon {
+  width: 40px;
+  height: 40px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 10px;
+
+  background: var(--color-primary-soft);
+  color: var(--color-secondary);
+}
+
+.mobile-more-item>div {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mobile-more-item>div>strong {
+  color: var(--color-text);
+
+  font-size: 12px;
+}
+
+.mobile-more-item>div>span {
+  color: var(--color-text-muted);
+
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.mobile-more-item-arrow {
+  color: var(--color-text-soft);
+}
+
+@media (max-width: 768px) {
+  .mobile-more-page .page-header {
+    margin-bottom: 16px;
+  }
+
+  .mobile-more-page .page-eyebrow {
+    display: none;
+  }
+
+  .mobile-more-page .page-header h1 {
+    font-size: 25px;
+  }
+
+  .mobile-more-page .page-header p {
+    display: none;
+  }
+
+  .mobile-more-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .mobile-more-summary-card {
+    padding: 10px;
+  }
+
+  .mobile-more-summary-card>div>strong {
+    font-size: 11px;
+  }
+
+  .mobile-more-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mobile-more-item {
+    min-height: 78px;
+  }
+}
+
+@media (max-width: 360px) {
+  .mobile-more-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mobile-more-summary-card {
+    min-height: 70px;
+
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .mobile-more-summary-card>div>strong {
+    font-size: 14px;
+  }
+}
