@@ -4893,3 +4893,182 @@ textarea:focus-visible {
     font-size: 14px;
   }
 }
+
+/* ===== HIZLI SATIŞ - SEPET YUVARLAMA ===== */
+
+.quick-sale-rounding-panel {
+  max-width: 520px;
+}
+
+.quick-sale-rounding-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  padding: 18px;
+}
+
+.quick-sale-rounding-current {
+  min-height: 64px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  padding: 0 16px;
+
+  border-radius: 12px;
+
+  background: var(--color-primary-soft);
+}
+
+.quick-sale-rounding-current span {
+  color: var(--color-text-muted);
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.quick-sale-rounding-current strong {
+  color: var(--color-secondary);
+
+  font-size: 22px;
+  letter-spacing: -0.4px;
+}
+
+.quick-sale-rounding-help {
+  color: var(--color-text-muted);
+
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.quick-sale-rounding-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.quick-sale-rounding-options button {
+  min-width: 0;
+  min-height: 94px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+
+  padding: 10px;
+
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.quick-sale-rounding-options button>span {
+  color: var(--color-text-muted);
+
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.quick-sale-rounding-options button>strong {
+  color: var(--color-secondary);
+
+  font-size: 18px;
+  letter-spacing: -0.2px;
+}
+
+.quick-sale-rounding-options button>small {
+  color: #b45309;
+
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.quick-sale-rounding-options .quick-sale-rounding-option-active {
+  border-color: var(--color-secondary);
+
+  background: var(--color-primary-soft);
+
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.08);
+}
+
+.quick-sale-rounding-reset {
+  min-height: 42px;
+
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+
+  background: #ffffff;
+  color: #b91c1c;
+
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.quick-sale-rounding-reset:disabled {
+  cursor: default;
+  color: var(--color-text-soft);
+  opacity: 0.45;
+}
+
+.quick-sale-rounding-empty {
+  padding: 14px;
+
+  border: 1px dashed var(--color-border);
+  border-radius: 10px;
+
+  color: var(--color-text-muted);
+
+  font-size: 10px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .quick-sale-rounding-panel {
+    width: 100%;
+    max-width: none;
+  }
+
+  .quick-sale-rounding-content {
+    padding: 16px;
+  }
+
+  .quick-sale-rounding-options {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .quick-sale-rounding-options button {
+    min-height: 88px;
+    padding: 8px 6px;
+  }
+
+  .quick-sale-rounding-options button>strong {
+    font-size: 16px;
+  }
+
+  .quick-sale-rounding-current strong {
+    font-size: 20px;
+  }
+
+  .quick-sale-discount-button {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 360px) {
+  .quick-sale-rounding-options {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-sale-rounding-options button {
+    min-height: 66px;
+  }
+}

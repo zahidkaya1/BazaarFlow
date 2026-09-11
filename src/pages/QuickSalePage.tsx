@@ -12,23 +12,19 @@ import {
 import { fifoService } from '../services/fifoService'
 import { inventoryService } from '../services/inventoryService'
 import { productService } from '../services/productService'
-import { salesService } from '../services/salesService'
+import {
+    distributeBasketDiscountMinor,
+    salesService,
+} from '../services/salesService'
 import type { InventoryLot } from '../types/inventoryLot'
 import type { Product } from '../types/product'
-import {
-    formatMoneyFromMinor,
-    parseMoneyToMinor,
-} from '../utils/money'
+import { formatMoneyFromMinor } from '../utils/money'
 
 type QuickSaleCartEntry = {
     quantity: number
-    actualUnitPriceMinor: number
-    discountReason?: string
 }
 
 type QuickSaleCart = Record<string, QuickSaleCartEntry>
-
-const QUICK_DISCOUNT_PRESETS_MINOR = [1000, 2000, 3000] as const
 
 function getTodayDateValue(): string {
     const now = new Date()
@@ -40,17 +36,101 @@ function getTodayDateValue(): string {
     return `${year}-${month}-${day}`
 }
 
-function formatMoneyInput(minor: number): string {
-    return (minor / 100).toFixed(2).replace('.', ',')
+function getRoundingTargets(
+    totalMinor: number,
+): number[] {
+    if (totalMinor <= 0) {
+        return []
+    }
+
+    /*
+     * Pazarcı kullanımında 39 TL gibi teknik olarak yakın ama
+     * pratikte yuvarlak olmayan tutarları göstermiyoruz.
+     *
+     * 40 TL     -> 35 / 30 / 20
+     * 167,50 TL -> 165 / 160 / 150
+     * 180 TL    -> 175 / 170 / 160
+     *
+     * İlk seçenek en yakın alt 5 TL katı, sonraki seçenekler
+     * ise alt 10 TL katlarıdır.
+     */
+    if (totalMinor >= 1000) {
+        const nearestFiveMinor =
+            Math.floor(
+                (totalMinor - 1) /
+                500,
+            ) * 500
+
+        const nearestTenMinor =
+            Math.floor(
+                (totalMinor - 1) /
+                1000,
+            ) * 1000
+
+        const targets = new Set<number>()
+
+        if (
+            nearestFiveMinor > 0 &&
+            nearestFiveMinor < totalMinor
+        ) {
+            targets.add(nearestFiveMinor)
+        }
+
+        if (
+            nearestTenMinor > 0 &&
+            nearestTenMinor < totalMinor
+        ) {
+            targets.add(nearestTenMinor)
+        }
+
+        let nextTenMinor =
+            nearestTenMinor - 1000
+
+        while (
+            targets.size < 3 &&
+            nextTenMinor > 0
+        ) {
+            targets.add(nextTenMinor)
+            nextTenMinor -= 1000
+        }
+
+        return Array.from(targets)
+            .sort(
+                (first, second) =>
+                    second - first,
+            )
+            .slice(0, 3)
+    }
+
+    /*
+     * 10 TL altındaki küçük tutarlarda tam TL üzerinden
+     * sade öneriler üretmek daha doğal.
+     */
+    const nearestLiraMinor =
+        Math.floor(
+            (totalMinor - 1) /
+            100,
+        ) * 100
+
+    return [
+        nearestLiraMinor,
+        nearestLiraMinor - 100,
+        nearestLiraMinor - 200,
+    ].filter(
+        (target) =>
+            target > 0 &&
+            target < totalMinor,
+    )
 }
 
 function QuickSalePage() {
     const data = useLiveQuery(
         async () => {
-            const [products, lots] = await Promise.all([
-                productService.getAll(),
-                inventoryService.getAll(),
-            ])
+            const [products, lots] =
+                await Promise.all([
+                    productService.getAll(),
+                    inventoryService.getAll(),
+                ])
 
             return {
                 products,
@@ -64,41 +144,68 @@ function QuickSalePage() {
         },
     )
 
-    const [cart, setCart] = useState<QuickSaleCart>({})
-    const [isDiscountPanelOpen, setIsDiscountPanelOpen] = useState(false)
-    const [discountProductId, setDiscountProductId] = useState('')
-    const [discountPrice, setDiscountPrice] = useState('')
-    const [discountReason, setDiscountReason] = useState('')
-    const [quickDiscountMinor, setQuickDiscountMinor] = useState(0)
-    const [message, setMessage] = useState('')
-    const [error, setError] = useState('')
-    const [isSaving, setIsSaving] = useState(false)
+    const [cart, setCart] =
+        useState<QuickSaleCart>({})
+
+    const [
+        basketTargetTotalMinor,
+        setBasketTargetTotalMinor,
+    ] = useState<number | null>(null)
+
+    const [
+        isDiscountPanelOpen,
+        setIsDiscountPanelOpen,
+    ] = useState(false)
+
+    const [message, setMessage] =
+        useState('')
+
+    const [error, setError] =
+        useState('')
+
+    const [isSaving, setIsSaving] =
+        useState(false)
 
     const activeProducts = useMemo(
         () =>
             data.products
-                .filter((product) => product.isActive)
+                .filter(
+                    (product) =>
+                        product.isActive,
+                )
                 .slice(0, 10),
         [data.products],
     )
 
-    const stockByProduct = useMemo(() => {
-        const result = new Map<string, number>()
+    const stockByProduct =
+        useMemo(() => {
+            const result =
+                new Map<string, number>()
 
-        for (const lot of data.lots) {
-            result.set(
-                lot.productId,
-                (result.get(lot.productId) ?? 0) + lot.quantityRemaining,
-            )
-        }
+            for (const lot of data.lots) {
+                result.set(
+                    lot.productId,
+                    (
+                        result.get(
+                            lot.productId,
+                        ) ?? 0
+                    ) +
+                    lot.quantityRemaining,
+                )
+            }
 
-        return result
-    }, [data.lots])
+            return result
+        }, [data.lots])
 
     const productMap = useMemo(
         () =>
             new Map(
-                activeProducts.map((product) => [product.id, product]),
+                activeProducts.map(
+                    (product) => [
+                        product.id,
+                        product,
+                    ],
+                ),
             ),
         [activeProducts],
     )
@@ -106,94 +213,179 @@ function QuickSalePage() {
     const cartItems = useMemo(
         () =>
             Object.entries(cart)
-                .map(([productId, entry]) => {
-                    const product = productMap.get(productId)
+                .map(
+                    (
+                        [
+                            productId,
+                            entry,
+                        ],
+                    ) => {
+                        const product =
+                            productMap.get(
+                                productId,
+                            )
 
-                    if (!product || entry.quantity <= 0) {
-                        return null
-                    }
+                        if (
+                            !product ||
+                            entry.quantity <= 0
+                        ) {
+                            return null
+                        }
 
-                    return {
-                        product,
-                        entry,
-                    }
-                })
+                        return {
+                            product,
+                            entry,
+                        }
+                    },
+                )
                 .filter(
                     (
                         item,
                     ): item is {
                         product: Product
                         entry: QuickSaleCartEntry
-                    } => item !== null,
+                    } =>
+                        item !== null,
                 ),
         [cart, productMap],
     )
 
-    const totalQuantity = cartItems.reduce(
-        (total, item) => total + item.entry.quantity,
-        0,
-    )
+    const totalQuantity =
+        cartItems.reduce(
+            (total, item) =>
+                total +
+                item.entry.quantity,
+            0,
+        )
 
-    const listTotalMinor = cartItems.reduce(
-        (total, item) =>
-            total +
-            item.entry.quantity * item.product.defaultSalePriceMinor,
-        0,
-    )
+    const listTotalMinor =
+        cartItems.reduce(
+            (total, item) =>
+                total +
+                item.entry.quantity *
+                item.product
+                    .defaultSalePriceMinor,
+            0,
+        )
 
-    const totalMinor = cartItems.reduce(
-        (total, item) =>
-            total + item.entry.quantity * item.entry.actualUnitPriceMinor,
-        0,
-    )
+    const effectiveBasketTargetTotalMinor =
+        basketTargetTotalMinor !== null &&
+            basketTargetTotalMinor >= 0 &&
+            basketTargetTotalMinor < listTotalMinor
+            ? basketTargetTotalMinor
+            : null
 
-    const discountTotalMinor = Math.max(0, listTotalMinor - totalMinor)
+    const totalMinor =
+        effectiveBasketTargetTotalMinor ??
+        listTotalMinor
 
-    const selectedDiscountProduct = productMap.get(discountProductId)
+    const discountTotalMinor =
+        Math.max(
+            0,
+            listTotalMinor -
+            totalMinor,
+        )
+
+    const roundingTargets =
+        useMemo(
+            () =>
+                getRoundingTargets(
+                    listTotalMinor,
+                ),
+            [listTotalMinor],
+        )
+
+    const basketDiscountAllocations =
+        useMemo(
+            () =>
+                effectiveBasketTargetTotalMinor ===
+                    null
+                    ? cartItems.map(
+                        () => 0,
+                    )
+                    : distributeBasketDiscountMinor(
+                        cartItems.map(
+                            ({
+                                product,
+                                entry,
+                            }) =>
+                                entry.quantity *
+                                product
+                                    .defaultSalePriceMinor,
+                        ),
+                        effectiveBasketTargetTotalMinor,
+                    ),
+            [
+                cartItems,
+                effectiveBasketTargetTotalMinor,
+            ],
+        )
 
     function clearFeedback() {
         setMessage('')
         setError('')
     }
 
-    function addProduct(product: Product) {
-        clearFeedback()
+    function resetBasketRounding() {
+        setBasketTargetTotalMinor(null)
+        setIsDiscountPanelOpen(false)
+    }
 
-        const stock = stockByProduct.get(product.id) ?? 0
+    function addProduct(
+        product: Product,
+    ) {
+        clearFeedback()
+        setBasketTargetTotalMinor(null)
+
+        const stock =
+            stockByProduct.get(
+                product.id,
+            ) ?? 0
 
         setCart((current) => {
-            const currentEntry = current[product.id]
-            const currentQuantity = currentEntry?.quantity ?? 0
+            const currentEntry =
+                current[product.id]
 
-            if (stock <= 0 || currentQuantity >= stock) {
+            const currentQuantity =
+                currentEntry?.quantity ?? 0
+
+            if (
+                stock <= 0 ||
+                currentQuantity >= stock
+            ) {
                 return current
             }
 
             return {
                 ...current,
                 [product.id]: {
-                    quantity: currentQuantity + 1,
-                    actualUnitPriceMinor:
-                        currentEntry?.actualUnitPriceMinor ??
-                        product.defaultSalePriceMinor,
-                    discountReason: currentEntry?.discountReason,
+                    quantity:
+                        currentQuantity + 1,
                 },
             }
         })
     }
 
-    function decreaseProduct(productId: string) {
+    function decreaseProduct(
+        productId: string,
+    ) {
         clearFeedback()
+        setBasketTargetTotalMinor(null)
 
         setCart((current) => {
-            const currentEntry = current[productId]
+            const currentEntry =
+                current[productId]
 
             if (!currentEntry) {
                 return current
             }
 
-            if (currentEntry.quantity <= 1) {
-                const next = { ...current }
+            if (
+                currentEntry.quantity <= 1
+            ) {
+                const next = {
+                    ...current,
+                }
 
                 delete next[productId]
 
@@ -203,18 +395,24 @@ function QuickSalePage() {
             return {
                 ...current,
                 [productId]: {
-                    ...currentEntry,
-                    quantity: currentEntry.quantity - 1,
+                    quantity:
+                        currentEntry.quantity -
+                        1,
                 },
             }
         })
     }
 
-    function removeProduct(productId: string) {
+    function removeProduct(
+        productId: string,
+    ) {
         clearFeedback()
+        setBasketTargetTotalMinor(null)
 
         setCart((current) => {
-            const next = { ...current }
+            const next = {
+                ...current,
+            }
 
             delete next[productId]
 
@@ -222,162 +420,45 @@ function QuickSalePage() {
         })
     }
 
-    function closeDiscountPanel() {
-        setIsDiscountPanelOpen(false)
-        setDiscountProductId('')
-        setDiscountPrice('')
-        setDiscountReason('')
-        setQuickDiscountMinor(0)
-    }
-
     function clearCart() {
         clearFeedback()
         setCart({})
-        closeDiscountPanel()
-    }
-
-    function loadDiscountDraft(productId: string) {
-        const product = productMap.get(productId)
-        const entry = cart[productId]
-
-        if (!product || !entry) {
-            return
-        }
-
-        setDiscountProductId(productId)
-        setDiscountPrice(formatMoneyInput(entry.actualUnitPriceMinor))
-        setDiscountReason(entry.discountReason ?? '')
-        setQuickDiscountMinor(
-            Math.max(
-                0,
-                product.defaultSalePriceMinor - entry.actualUnitPriceMinor,
-            ),
-        )
+        resetBasketRounding()
     }
 
     function openDiscountPanel() {
         clearFeedback()
 
-        const firstItem = cartItems[0]
-
-        if (!firstItem) {
+        if (
+            cartItems.length === 0
+        ) {
             return
         }
 
-        loadDiscountDraft(firstItem.product.id)
         setIsDiscountPanelOpen(true)
     }
 
-    function openQuickDiscountPanel(productId: string) {
+    function applyRoundingTarget(
+        targetMinor: number,
+    ) {
         clearFeedback()
-        loadDiscountDraft(productId)
-        setIsDiscountPanelOpen(true)
-    }
-
-    function applyQuickDiscount() {
-        clearFeedback()
-
-        if (!selectedDiscountProduct) {
-            return
-        }
-
-        const currentEntry = cart[selectedDiscountProduct.id]
-
-        if (!currentEntry) {
-            return
-        }
 
         if (
-            quickDiscountMinor < 0 ||
-            quickDiscountMinor > selectedDiscountProduct.defaultSalePriceMinor
+            targetMinor < 0 ||
+            targetMinor >=
+            listTotalMinor
         ) {
-            setError('Seçilen indirim ürün fiyatından yüksek olamaz.')
-            return
-        }
-
-        const actualUnitPriceMinor =
-            selectedDiscountProduct.defaultSalePriceMinor - quickDiscountMinor
-
-        setCart((current) => ({
-            ...current,
-            [selectedDiscountProduct.id]: {
-                ...currentEntry,
-                actualUnitPriceMinor,
-                discountReason:
-                    quickDiscountMinor > 0
-                        ? `POS hızlı indirim: ${formatMoneyFromMinor(
-                            quickDiscountMinor,
-                        )}`
-                        : undefined,
-            },
-        }))
-
-        closeDiscountPanel()
-    }
-
-    function saveSpecialPrice() {
-        clearFeedback()
-
-        try {
-            if (!selectedDiscountProduct) {
-                throw new Error('Özel fiyat uygulanacak ürünü seçin.')
-            }
-
-            const currentEntry = cart[selectedDiscountProduct.id]
-
-            if (!currentEntry) {
-                throw new Error('Seçilen ürün sepette bulunamadı.')
-            }
-
-            const actualUnitPriceMinor = parseMoneyToMinor(discountPrice)
-
-            setCart((current) => ({
-                ...current,
-                [selectedDiscountProduct.id]: {
-                    ...currentEntry,
-                    actualUnitPriceMinor,
-                    discountReason: discountReason.trim() || undefined,
-                },
-            }))
-
-            closeDiscountPanel()
-        } catch (caughtError) {
             setError(
-                caughtError instanceof Error
-                    ? caughtError.message
-                    : 'Özel fiyat uygulanamadı.',
+                'Geçerli bir yuvarlama tutarı seçin.',
             )
-        }
-    }
-
-    function resetSelectedSpecialPrice() {
-        clearFeedback()
-
-        if (!selectedDiscountProduct) {
             return
         }
 
-        const currentEntry = cart[selectedDiscountProduct.id]
-
-        if (!currentEntry) {
-            return
-        }
-
-        setCart((current) => ({
-            ...current,
-            [selectedDiscountProduct.id]: {
-                ...currentEntry,
-                actualUnitPriceMinor:
-                    selectedDiscountProduct.defaultSalePriceMinor,
-                discountReason: undefined,
-            },
-        }))
-
-        setDiscountPrice(
-            formatMoneyInput(selectedDiscountProduct.defaultSalePriceMinor),
+        setBasketTargetTotalMinor(
+            targetMinor,
         )
-        setDiscountReason('')
-        setQuickDiscountMinor(0)
+
+        setIsDiscountPanelOpen(false)
     }
 
     async function completeSale() {
@@ -388,16 +469,29 @@ function QuickSalePage() {
         }
 
         try {
-            if (cartItems.length === 0) {
+            if (
+                cartItems.length === 0
+            ) {
                 throw new Error(
                     'Satışı tamamlamak için sepete ürün ekleyin.',
                 )
             }
 
-            for (const { product, entry } of cartItems) {
-                const currentStock = stockByProduct.get(product.id) ?? 0
+            for (
+                const {
+                    product,
+                    entry,
+                } of cartItems
+            ) {
+                const currentStock =
+                    stockByProduct.get(
+                        product.id,
+                    ) ?? 0
 
-                if (entry.quantity > currentStock) {
+                if (
+                    entry.quantity >
+                    currentStock
+                ) {
                     throw new Error(
                         `${product.name} için yeterli stok bulunmuyor.`,
                     )
@@ -406,27 +500,68 @@ function QuickSalePage() {
 
             setIsSaving(true)
 
-            const saleDate = getTodayDateValue()
+            const saleDate =
+                getTodayDateValue()
 
-            const items = cartItems.map(({ product, entry }) => ({
-                productId: product.id,
-                quantity: entry.quantity,
-                listUnitPriceMinor: product.defaultSalePriceMinor,
-                actualUnitPriceMinor: entry.actualUnitPriceMinor,
-                discountReason: entry.discountReason,
-            }))
+            const items =
+                cartItems.map(
+                    (
+                        {
+                            product,
+                            entry,
+                        },
+                        index,
+                    ) => {
+                        const basketDiscountMinor =
+                            basketDiscountAllocations[
+                            index
+                            ] ?? 0
+
+                        return {
+                            productId:
+                                product.id,
+
+                            quantity:
+                                entry.quantity,
+
+                            listUnitPriceMinor:
+                                product
+                                    .defaultSalePriceMinor,
+
+                            actualUnitPriceMinor:
+                                product
+                                    .defaultSalePriceMinor,
+
+                            basketDiscountMinor:
+                                basketDiscountMinor >
+                                    0
+                                    ? basketDiscountMinor
+                                    : undefined,
+
+                            discountReason:
+                                basketDiscountMinor >
+                                    0
+                                    ? 'Sepet yuvarlama indirimi'
+                                    : undefined,
+                        }
+                    },
+                )
 
             /*
-             * POS ekranı ayrı bir satış motoru oluşturmaz.
-             * Normal satış ekranıyla aynı FIFO kontrolünü ve aynı
-             * salesService kaydını kullanır.
+             * POS ayrı bir FIFO motoru oluşturmaz.
+             * Stok tüketimi aynı FIFO servisiyle doğrulanır,
+             * sepet indirimi yalnızca satış gelirine dağıtılır.
              */
             await fifoService.previewSale(
                 saleDate,
-                items.map((item) => ({
-                    productId: item.productId,
-                    quantity: item.quantity,
-                })),
+                items.map(
+                    (item) => ({
+                        productId:
+                            item.productId,
+                        quantity:
+                            item.quantity,
+                    }),
+                ),
             )
 
             await salesService.create({
@@ -435,7 +570,7 @@ function QuickSalePage() {
             })
 
             setCart({})
-            closeDiscountPanel()
+            resetBasketRounding()
 
             setMessage(
                 `Satış tamamlandı • ${totalQuantity} adet • ${formatMoneyFromMinor(
@@ -457,23 +592,31 @@ function QuickSalePage() {
         <div className="dashboard quick-sale-page">
             <header className="page-header quick-sale-header">
                 <div>
-                    <span className="page-eyebrow">BazaarFlow POS</span>
+                    <span className="page-eyebrow">
+                        BazaarFlow POS
+                    </span>
+
                     <h1>Hızlı Satış</h1>
+
                     <p>
-                        Ürüne dokunun, sepete ekleyin ve satışınızı hızlıca
-                        tamamlayın.
+                        Ürüne dokunun, sepete ekleyin ve
+                        satışınızı hızlıca tamamlayın.
                     </p>
                 </div>
 
                 <div className="quick-sale-header-badge">
                     <Zap size={18} />
-                    <span>{totalQuantity} ürün</span>
+                    <span>
+                        {totalQuantity} ürün
+                    </span>
                 </div>
             </header>
 
             {(message || error) && (
                 <div
-                    className={`form-message ${error ? 'form-message-error' : 'form-message-success'
+                    className={`form-message ${error
+                            ? 'form-message-error'
+                            : 'form-message-success'
                         }`}
                     role="status"
                 >
@@ -486,72 +629,113 @@ function QuickSalePage() {
                     <div className="quick-sale-section-header">
                         <div>
                             <h2>Ürünler</h2>
-                            <p>Her dokunuş sepete 1 adet ekler.</p>
+                            <p>
+                                Her dokunuş sepete 1 adet ekler.
+                            </p>
                         </div>
 
-                        <span>{activeProducts.length}/10</span>
+                        <span>
+                            {activeProducts.length}/10
+                        </span>
                     </div>
 
                     {activeProducts.length === 0 ? (
                         <div className="quick-sale-empty">
                             <ShoppingCart size={34} />
-                            <strong>Aktif ürün bulunamadı</strong>
+                            <strong>
+                                Aktif ürün bulunamadı
+                            </strong>
                             <span>
                                 Önce Ürünler ekranından aktif ürün ekleyin.
                             </span>
                         </div>
                     ) : (
                         <div className="quick-sale-product-grid">
-                            {activeProducts.map((product) => {
-                                const stock =
-                                    stockByProduct.get(product.id) ?? 0
-                                const cartQuantity =
-                                    cart[product.id]?.quantity ?? 0
-                                const unavailable = stock <= 0
-                                const reachedStock = cartQuantity >= stock
+                            {activeProducts.map(
+                                (product) => {
+                                    const stock =
+                                        stockByProduct.get(
+                                            product.id,
+                                        ) ?? 0
 
-                                return (
-                                    <button
-                                        key={product.id}
-                                        type="button"
-                                        className={`quick-sale-product-button ${unavailable
-                                            ? 'quick-sale-product-button-disabled'
-                                            : ''
-                                            }`}
-                                        disabled={unavailable || reachedStock}
-                                        onClick={() => addProduct(product)}
-                                    >
-                                        {cartQuantity > 0 && (
-                                            <span className="quick-sale-product-count">
-                                                ×{cartQuantity}
-                                            </span>
-                                        )}
+                                    const cartQuantity =
+                                        cart[
+                                            product.id
+                                        ]?.quantity ?? 0
 
-                                        <strong>{product.name}</strong>
+                                    const unavailable =
+                                        stock <= 0
 
-                                        {product.sku && (
-                                            <small>{product.sku}</small>
-                                        )}
+                                    const reachedStock =
+                                        cartQuantity >=
+                                        stock
 
-                                        <span className="quick-sale-product-price">
-                                            {formatMoneyFromMinor(
-                                                product.defaultSalePriceMinor,
-                                            )}
-                                        </span>
-
-                                        <span
-                                            className={`quick-sale-product-stock ${stock <= 0
-                                                ? 'quick-sale-product-stock-empty'
-                                                : ''
+                                    return (
+                                        <button
+                                            key={
+                                                product.id
+                                            }
+                                            type="button"
+                                            className={`quick-sale-product-button ${unavailable
+                                                    ? 'quick-sale-product-button-disabled'
+                                                    : ''
                                                 }`}
+                                            disabled={
+                                                unavailable ||
+                                                reachedStock
+                                            }
+                                            onClick={() =>
+                                                addProduct(
+                                                    product,
+                                                )
+                                            }
                                         >
-                                            {stock > 0
-                                                ? `${stock} stok`
-                                                : 'Stok yok'}
-                                        </span>
-                                    </button>
-                                )
-                            })}
+                                            {cartQuantity >
+                                                0 && (
+                                                    <span className="quick-sale-product-count">
+                                                        ×
+                                                        {
+                                                            cartQuantity
+                                                        }
+                                                    </span>
+                                                )}
+
+                                            <strong>
+                                                {
+                                                    product.name
+                                                }
+                                            </strong>
+
+                                            {product.sku && (
+                                                <small>
+                                                    {
+                                                        product.sku
+                                                    }
+                                                </small>
+                                            )}
+
+                                            <span className="quick-sale-product-price">
+                                                {formatMoneyFromMinor(
+                                                    product.defaultSalePriceMinor,
+                                                )}
+                                            </span>
+
+                                            <span
+                                                className={`quick-sale-product-stock ${stock <=
+                                                        0
+                                                        ? 'quick-sale-product-stock-empty'
+                                                        : ''
+                                                    }`}
+                                            >
+                                                {stock >
+                                                    0
+                                                    ? `${stock} stok`
+                                                    : 'Stok yok'}
+                                            </span>
+                                        </button>
+                                    )
+                                },
+                            )}
                         </div>
                     )}
                 </section>
@@ -560,7 +744,9 @@ function QuickSalePage() {
                     <div className="quick-sale-section-header">
                         <div>
                             <h2>Sepet</h2>
-                            <p>Satış özeti</p>
+                            <p>
+                                Satış özeti
+                            </p>
                         </div>
 
                         <ShoppingCart size={20} />
@@ -568,160 +754,195 @@ function QuickSalePage() {
 
                     {cartItems.length === 0 ? (
                         <div className="quick-sale-cart-empty">
-                            <ShoppingCart size={34} strokeWidth={1.5} />
-                            <strong>Sepet boş</strong>
+                            <ShoppingCart
+                                size={34}
+                                strokeWidth={1.5}
+                            />
+
+                            <strong>
+                                Sepet boş
+                            </strong>
+
                             <span>
                                 Satışa başlamak için bir ürüne dokunun.
                             </span>
                         </div>
                     ) : (
                         <div className="quick-sale-cart-items">
-                            {cartItems.map(({ product, entry }) => {
-                                const stock =
-                                    stockByProduct.get(product.id) ?? 0
-                                const hasSpecialPrice =
-                                    entry.actualUnitPriceMinor !==
-                                    product.defaultSalePriceMinor
+                            {cartItems.map(
+                                ({
+                                    product,
+                                    entry,
+                                }) => {
+                                    const stock =
+                                        stockByProduct.get(
+                                            product.id,
+                                        ) ?? 0
 
-                                return (
-                                    <article
-                                        key={product.id}
-                                        className="quick-sale-cart-item"
-                                    >
-                                        <div className="quick-sale-cart-item-info">
-                                            <div>
-                                                <strong>{product.name}</strong>
-
-                                                {hasSpecialPrice && (
-                                                    <span className="quick-sale-special-price-badge">
-                                                        Özel fiyat
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            <span>
-                                                {formatMoneyFromMinor(
-                                                    entry.actualUnitPriceMinor,
-                                                )}{' '}
-                                                / adet
-                                            </span>
-                                        </div>
-
-                                        {entry.discountReason && (
-                                            <div className="quick-sale-discount-reason">
-                                                {entry.discountReason}
-                                            </div>
-                                        )}
-
-                                        <button
-                                            type="button"
-                                            className="quick-sale-mobile-discount-button"
-                                            onClick={() =>
-                                                openQuickDiscountPanel(product.id)
+                                    return (
+                                        <article
+                                            key={
+                                                product.id
                                             }
+                                            className="quick-sale-cart-item"
                                         >
-                                            <Percent size={15} />
-                                            {hasSpecialPrice
-                                                ? 'İndirimi Değiştir'
-                                                : 'İndirim'}
-                                        </button>
+                                            <div className="quick-sale-cart-item-info">
+                                                <div>
+                                                    <strong>
+                                                        {
+                                                            product.name
+                                                        }
+                                                    </strong>
+                                                </div>
 
-                                        <div className="quick-sale-cart-item-bottom">
-                                            <div className="quick-sale-quantity-control">
-                                                <button
-                                                    type="button"
-                                                    aria-label={`${product.name} azalt`}
-                                                    onClick={() =>
-                                                        decreaseProduct(
-                                                            product.id,
-                                                        )
-                                                    }
-                                                >
-                                                    <Minus size={16} />
-                                                </button>
+                                                <span>
+                                                    {formatMoneyFromMinor(
+                                                        product.defaultSalePriceMinor,
+                                                    )}{' '}
+                                                    / adet
+                                                </span>
+                                            </div>
 
-                                                <strong>
-                                                    {entry.quantity}
+                                            <div className="quick-sale-cart-item-bottom">
+                                                <div className="quick-sale-quantity-control">
+                                                    <button
+                                                        type="button"
+                                                        aria-label={`${product.name} azalt`}
+                                                        onClick={() =>
+                                                            decreaseProduct(
+                                                                product.id,
+                                                            )
+                                                        }
+                                                    >
+                                                        <Minus
+                                                            size={
+                                                                16
+                                                            }
+                                                        />
+                                                    </button>
+
+                                                    <strong>
+                                                        {
+                                                            entry.quantity
+                                                        }
+                                                    </strong>
+
+                                                    <button
+                                                        type="button"
+                                                        aria-label={`${product.name} artır`}
+                                                        disabled={
+                                                            entry.quantity >=
+                                                            stock
+                                                        }
+                                                        onClick={() =>
+                                                            addProduct(
+                                                                product,
+                                                            )
+                                                        }
+                                                    >
+                                                        <Plus
+                                                            size={
+                                                                16
+                                                            }
+                                                        />
+                                                    </button>
+                                                </div>
+
+                                                <strong className="quick-sale-line-total">
+                                                    {formatMoneyFromMinor(
+                                                        product.defaultSalePriceMinor *
+                                                        entry.quantity,
+                                                    )}
                                                 </strong>
 
                                                 <button
                                                     type="button"
-                                                    aria-label={`${product.name} artır`}
-                                                    disabled={
-                                                        entry.quantity >= stock
-                                                    }
+                                                    className="quick-sale-remove-button"
+                                                    aria-label={`${product.name} sepetten çıkar`}
                                                     onClick={() =>
-                                                        addProduct(product)
+                                                        removeProduct(
+                                                            product.id,
+                                                        )
                                                     }
                                                 >
-                                                    <Plus size={16} />
+                                                    <Trash2
+                                                        size={
+                                                            17
+                                                        }
+                                                    />
                                                 </button>
                                             </div>
-
-                                            <strong className="quick-sale-line-total">
-                                                {formatMoneyFromMinor(
-                                                    entry.actualUnitPriceMinor *
-                                                    entry.quantity,
-                                                )}
-                                            </strong>
-
-                                            <button
-                                                type="button"
-                                                className="quick-sale-remove-button"
-                                                aria-label={`${product.name} sepetten çıkar`}
-                                                onClick={() =>
-                                                    removeProduct(product.id)
-                                                }
-                                            >
-                                                <Trash2 size={17} />
-                                            </button>
-                                        </div>
-                                    </article>
-                                )
-                            })}
+                                        </article>
+                                    )
+                                },
+                            )}
                         </div>
                     )}
 
                     <div className="quick-sale-cart-footer">
                         <div className="quick-sale-total-row">
-                            <span>Toplam adet</span>
-                            <strong>{totalQuantity}</strong>
+                            <span>
+                                Toplam adet
+                            </span>
+                            <strong>
+                                {totalQuantity}
+                            </strong>
                         </div>
 
-                        {discountTotalMinor > 0 && (
-                            <div className="quick-sale-discount-total">
-                                <span>İndirim</span>
-                                <strong>
-                                    -
-                                    {formatMoneyFromMinor(
-                                        discountTotalMinor,
-                                    )}
-                                </strong>
-                            </div>
-                        )}
+                        {discountTotalMinor >
+                            0 && (
+                                <div className="quick-sale-discount-total">
+                                    <span>
+                                        Sepet indirimi
+                                    </span>
+                                    <strong>
+                                        -
+                                        {formatMoneyFromMinor(
+                                            discountTotalMinor,
+                                        )}
+                                    </strong>
+                                </div>
+                            )}
 
                         <div className="quick-sale-grand-total">
-                            <span>TOPLAM</span>
+                            <span>
+                                TOPLAM
+                            </span>
+
                             <strong>
-                                {formatMoneyFromMinor(totalMinor)}
+                                {formatMoneyFromMinor(
+                                    totalMinor,
+                                )}
                             </strong>
                         </div>
 
                         <button
                             type="button"
-                            className="quick-sale-discount-button quick-sale-desktop-discount-button"
-                            disabled={cartItems.length === 0 || isSaving}
-                            onClick={openDiscountPanel}
+                            className="quick-sale-discount-button"
+                            disabled={
+                                cartItems.length ===
+                                0 ||
+                                isSaving
+                            }
+                            onClick={
+                                openDiscountPanel
+                            }
                         >
                             <Percent size={17} />
-                            İndirim / Özel Fiyat
+                            Toplamı Yuvarla
                         </button>
 
                         <button
                             type="button"
                             className="quick-sale-complete-button"
-                            disabled={cartItems.length === 0 || isSaving}
-                            onClick={() => void completeSale()}
+                            disabled={
+                                cartItems.length ===
+                                0 ||
+                                isSaving
+                            }
+                            onClick={() =>
+                                void completeSale()
+                            }
                         >
                             {isSaving
                                 ? 'SATIŞ KAYDEDİLİYOR...'
@@ -731,7 +952,11 @@ function QuickSalePage() {
                         <button
                             type="button"
                             className="quick-sale-clear-button"
-                            disabled={cartItems.length === 0 || isSaving}
+                            disabled={
+                                cartItems.length ===
+                                0 ||
+                                isSaving
+                            }
                             onClick={clearCart}
                         >
                             Sepeti Temizle
@@ -745,204 +970,128 @@ function QuickSalePage() {
                     className="quick-sale-modal-backdrop"
                     role="presentation"
                     onMouseDown={(event) => {
-                        if (event.target === event.currentTarget) {
-                            closeDiscountPanel()
+                        if (
+                            event.target ===
+                            event.currentTarget
+                        ) {
+                            setIsDiscountPanelOpen(
+                                false,
+                            )
                         }
                     }}
                 >
                     <section
-                        className="quick-sale-discount-panel"
+                        className="quick-sale-discount-panel quick-sale-rounding-panel"
                         role="dialog"
                         aria-modal="true"
-                        aria-labelledby="quick-sale-discount-title"
+                        aria-labelledby="quick-sale-rounding-title"
                     >
                         <div className="quick-sale-discount-header">
                             <div>
-                                <span>Fiyat Düzenle</span>
-                                <h2 id="quick-sale-discount-title">
-                                    İndirim / Özel Fiyat
+                                <span>
+                                    Sepet İndirimi
+                                </span>
+
+                                <h2 id="quick-sale-rounding-title">
+                                    Toplamı Yuvarla
                                 </h2>
                             </div>
 
                             <button
                                 type="button"
                                 aria-label="Kapat"
-                                onClick={closeDiscountPanel}
+                                onClick={() =>
+                                    setIsDiscountPanelOpen(
+                                        false,
+                                    )
+                                }
                             >
                                 <X size={20} />
                             </button>
                         </div>
 
-                        <div className="quick-sale-discount-desktop">
-                            <div className="quick-sale-discount-content">
-                                <div className="quick-sale-discount-products">
-                                    {cartItems.map(({ product, entry }) => (
+                        <div className="quick-sale-rounding-content">
+                            <div className="quick-sale-rounding-current">
+                                <span>
+                                    Normal sepet toplamı
+                                </span>
+
+                                <strong>
+                                    {formatMoneyFromMinor(
+                                        listTotalMinor,
+                                    )}
+                                </strong>
+                            </div>
+
+                            <div className="quick-sale-rounding-help">
+                                Pazarlık sonrası müşteriden alınacak
+                                yakın toplamı seçin. İndirim ürünlere
+                                fiyatları oranında otomatik dağıtılır.
+                            </div>
+
+                            <div className="quick-sale-rounding-options">
+                                {roundingTargets.map(
+                                    (target) => (
                                         <button
-                                            key={product.id}
+                                            key={
+                                                target
+                                            }
                                             type="button"
                                             className={
-                                                discountProductId === product.id
-                                                    ? 'quick-sale-discount-product-active'
+                                                effectiveBasketTargetTotalMinor ===
+                                                    target
+                                                    ? 'quick-sale-rounding-option-active'
                                                     : ''
                                             }
                                             onClick={() =>
-                                                loadDiscountDraft(product.id)
+                                                applyRoundingTarget(
+                                                    target,
+                                                )
                                             }
                                         >
-                                            <strong>{product.name}</strong>
-                                            <span>{entry.quantity} adet</span>
-                                        </button>
-                                    ))}
-                                </div>
+                                            <span>
+                                                Müşteriden Al
+                                            </span>
 
-                                {selectedDiscountProduct && (
-                                    <>
-                                        <div className="quick-sale-list-price">
-                                            <span>Liste fiyatı</span>
                                             <strong>
                                                 {formatMoneyFromMinor(
-                                                    selectedDiscountProduct.defaultSalePriceMinor,
+                                                    target,
                                                 )}
                                             </strong>
-                                        </div>
 
-                                        <label className="quick-sale-discount-field">
-                                            <span>Satış fiyatı</span>
-                                            <input
-                                                type="text"
-                                                inputMode="decimal"
-                                                value={discountPrice}
-                                                onChange={(event) =>
-                                                    setDiscountPrice(
-                                                        event.target.value,
-                                                    )
-                                                }
-                                                placeholder="Örn. 55,00"
-                                            />
-                                        </label>
-
-                                        <label className="quick-sale-discount-field">
-                                            <span>
-                                                İndirim nedeni
-                                                <small>İsteğe bağlı</small>
-                                            </span>
-                                            <input
-                                                type="text"
-                                                value={discountReason}
-                                                onChange={(event) =>
-                                                    setDiscountReason(
-                                                        event.target.value,
-                                                    )
-                                                }
-                                                placeholder="Örn. Müşteri indirimi"
-                                            />
-                                        </label>
-                                    </>
+                                            <small>
+                                                -
+                                                {formatMoneyFromMinor(
+                                                    listTotalMinor -
+                                                    target,
+                                                )}
+                                            </small>
+                                        </button>
+                                    ),
                                 )}
                             </div>
 
-                            <div className="quick-sale-discount-actions">
-                                <button
-                                    type="button"
-                                    className="quick-sale-reset-price-button"
-                                    onClick={resetSelectedSpecialPrice}
-                                >
-                                    Liste Fiyatına Dön
-                                </button>
-
-                                <button
-                                    type="button"
-                                    className="quick-sale-save-price-button"
-                                    onClick={saveSpecialPrice}
-                                >
-                                    Fiyatı Uygula
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="quick-sale-discount-mobile">
-                            {selectedDiscountProduct && (
-                                <>
-                                    <div className="quick-sale-mobile-discount-product">
-                                        <span>Ürün</span>
-                                        <strong>
-                                            {selectedDiscountProduct.name}
-                                        </strong>
+                            {roundingTargets.length ===
+                                0 && (
+                                    <div className="quick-sale-rounding-empty">
+                                        Bu sepet için uygun bir alt
+                                        yuvarlama seçeneği oluşmadı.
                                     </div>
+                                )}
 
-                                    <div className="quick-sale-mobile-discount-price-row">
-                                        <span>Normal fiyat</span>
-                                        <strong>
-                                            {formatMoneyFromMinor(
-                                                selectedDiscountProduct.defaultSalePriceMinor,
-                                            )}
-                                        </strong>
-                                    </div>
-
-                                    <div className="quick-sale-mobile-discount-presets">
-                                        {QUICK_DISCOUNT_PRESETS_MINOR.map(
-                                            (presetMinor) => (
-                                                <button
-                                                    key={presetMinor}
-                                                    type="button"
-                                                    className={
-                                                        quickDiscountMinor ===
-                                                            presetMinor
-                                                            ? 'quick-sale-mobile-discount-preset-active'
-                                                            : ''
-                                                    }
-                                                    disabled={
-                                                        presetMinor >
-                                                        selectedDiscountProduct.defaultSalePriceMinor
-                                                    }
-                                                    onClick={() =>
-                                                        setQuickDiscountMinor(
-                                                            presetMinor,
-                                                        )
-                                                    }
-                                                >
-                                                    -
-                                                    {formatMoneyFromMinor(
-                                                        presetMinor,
-                                                    )}
-                                                </button>
-                                            ),
-                                        )}
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        className="quick-sale-mobile-discount-remove"
-                                        disabled={quickDiscountMinor === 0}
-                                        onClick={() =>
-                                            setQuickDiscountMinor(0)
-                                        }
-                                    >
-                                        İndirimi Kaldır
-                                    </button>
-
-                                    <div className="quick-sale-mobile-discount-preview">
-                                        <span>Yeni birim fiyat</span>
-                                        <strong>
-                                            {formatMoneyFromMinor(
-                                                Math.max(
-                                                    0,
-                                                    selectedDiscountProduct.defaultSalePriceMinor -
-                                                    quickDiscountMinor,
-                                                ),
-                                            )}
-                                        </strong>
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        className="quick-sale-mobile-discount-confirm"
-                                        onClick={applyQuickDiscount}
-                                    >
-                                        ONAYLA
-                                    </button>
-                                </>
-                            )}
+                            <button
+                                type="button"
+                                className="quick-sale-rounding-reset"
+                                disabled={
+                                    effectiveBasketTargetTotalMinor ===
+                                    null
+                                }
+                                onClick={
+                                    resetBasketRounding
+                                }
+                            >
+                                İndirimi Kaldır
+                            </button>
                         </div>
                     </section>
                 </div>

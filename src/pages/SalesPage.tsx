@@ -18,6 +18,8 @@ import {
 } from '../services/fifoService'
 import { productService } from '../services/productService'
 import {
+    getSaleItemDiscountMinor,
+    getSaleItemRevenueMinor,
     salesService,
     type SaleHistoryRecord,
 } from '../services/salesService'
@@ -33,6 +35,7 @@ type DraftSaleItem = {
     quantity: number
     listUnitPriceMinor: number
     actualUnitPriceMinor: number
+    basketDiscountMinor?: number
     discountReason?: string
 }
 
@@ -67,23 +70,14 @@ function rebuildFilteredHistoryRecord(
     const revenueMinor = items.reduce(
         (total, item) =>
             total +
-            item.quantity *
-            item.actualUnitPriceMinor,
+            item.revenueMinor,
         0,
     )
 
     const discountMinor = items.reduce(
-        (total, item) => {
-            const difference =
-                item.listUnitPriceMinor -
-                item.actualUnitPriceMinor
-
-            return (
-                total +
-                Math.max(0, difference) *
-                item.quantity
-            )
-        },
+        (total, item) =>
+            total +
+            item.discountMinor,
         0,
     )
 
@@ -318,21 +312,14 @@ function SalesPage() {
     const revenueMinor = draftItems.reduce(
         (total, item) =>
             total +
-            item.quantity * item.actualUnitPriceMinor,
+            getSaleItemRevenueMinor(item),
         0,
     )
 
     const discountMinor = draftItems.reduce(
-        (total, item) => {
-            const difference =
-                item.listUnitPriceMinor -
-                item.actualUnitPriceMinor
-
-            return (
-                total +
-                Math.max(0, difference) * item.quantity
-            )
-        },
+        (total, item) =>
+            total +
+            getSaleItemDiscountMinor(item),
         0,
     )
 
@@ -423,6 +410,7 @@ function SalesPage() {
                     selectedProduct.defaultSalePriceMinor,
 
                 actualUnitPriceMinor,
+                basketDiscountMinor: undefined,
 
                 discountReason:
                     discountReason.trim() || undefined,
@@ -487,6 +475,7 @@ function SalesPage() {
                             nextProduct.defaultSalePriceMinor,
                         actualUnitPriceMinor:
                             nextProduct.defaultSalePriceMinor,
+                        basketDiscountMinor: undefined,
                         discountReason: undefined,
                     }
                     : item,
@@ -538,6 +527,7 @@ function SalesPage() {
                         ? {
                             ...item,
                             actualUnitPriceMinor: 0,
+                            basketDiscountMinor: undefined,
                         }
                         : item,
                 ),
@@ -556,6 +546,7 @@ function SalesPage() {
                         ? {
                             ...item,
                             actualUnitPriceMinor: priceMinor,
+                            basketDiscountMinor: undefined,
                         }
                         : item,
                 ),
@@ -630,6 +621,9 @@ function SalesPage() {
 
                 actualUnitPriceMinor:
                     item.actualUnitPriceMinor,
+
+                basketDiscountMinor:
+                    item.basketDiscountMinor,
 
                 discountReason:
                     item.discountReason,
@@ -793,6 +787,9 @@ function SalesPage() {
 
                     actualUnitPriceMinor:
                         item.actualUnitPriceMinor,
+
+                    basketDiscountMinor:
+                        item.basketDiscountMinor,
 
                     discountReason:
                         item.discountReason,
@@ -1187,15 +1184,14 @@ function SalesPage() {
                                 <tbody>
                                     {draftItems.map((item, index) => {
                                         const itemRevenue =
-                                            item.quantity *
-                                            item.actualUnitPriceMinor
+                                            getSaleItemRevenueMinor(
+                                                item,
+                                            )
 
                                         const itemDiscount =
-                                            Math.max(
-                                                0,
-                                                item.listUnitPriceMinor -
-                                                item.actualUnitPriceMinor,
-                                            ) * item.quantity
+                                            getSaleItemDiscountMinor(
+                                                item,
+                                            )
 
                                         const itemCost =
                                             preview?.items[index]?.totalCostMinor ??
@@ -1265,6 +1261,16 @@ function SalesPage() {
                                                             {item.discountReason && (
                                                                 <span className="sale-item-reason">
                                                                     {item.discountReason}
+                                                                </span>
+                                                            )}
+
+                                                            {(item.basketDiscountMinor ?? 0) > 0 && (
+                                                                <span className="sale-item-reason">
+                                                                    Sepet indirimi:{' '}
+                                                                    -
+                                                                    {formatMoneyFromMinor(
+                                                                        item.basketDiscountMinor ?? 0,
+                                                                    )}
                                                                 </span>
                                                             )}
                                                         </>
@@ -1759,6 +1765,16 @@ function SalesPage() {
                                                                 }
                                                             </span>
                                                         )}
+
+                                                        {(item.basketDiscountMinor ?? 0) > 0 && (
+                                                            <span>
+                                                                Sepet indirimi:{' '}
+                                                                -
+                                                                {formatMoneyFromMinor(
+                                                                    item.basketDiscountMinor ?? 0,
+                                                                )}
+                                                            </span>
+                                                        )}
                                                     </div>
 
                                                     <div className="sale-history-item-values">
@@ -1780,9 +1796,7 @@ function SalesPage() {
                                                                 <span>
                                                                     Kâr:{' '}
                                                                     {formatMoneyFromMinor(
-                                                                        item.quantity *
-                                                                        item.actualUnitPriceMinor -
-                                                                        item.costMinor,
+                                                                        item.grossProfitMinor,
                                                                     )}
                                                                 </span>
                                                             )}

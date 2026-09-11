@@ -966,23 +966,14 @@ function filterRecordItems(
     const revenueMinor = matchingItems.reduce(
         (total, item) =>
             total +
-            item.quantity *
-            item.actualUnitPriceMinor,
+            item.revenueMinor,
         0,
     )
 
     const discountMinor = matchingItems.reduce(
-        (total, item) => {
-            const difference =
-                item.listUnitPriceMinor -
-                item.actualUnitPriceMinor
-
-            return (
-                total +
-                Math.max(0, difference) *
-                item.quantity
-            )
-        },
+        (total, item) =>
+            total +
+            item.discountMinor,
         0,
     )
 
@@ -1277,15 +1268,10 @@ function ReportsPage() {
             current.transactionCount += 1
 
             const itemRevenue =
-                item.quantity *
-                item.actualUnitPriceMinor
+                item.revenueMinor
 
             const itemDiscount =
-                Math.max(
-                    0,
-                    item.listUnitPriceMinor -
-                    item.actualUnitPriceMinor,
-                ) * item.quantity
+                item.discountMinor
 
             current.revenueMinor += itemRevenue
             current.costMinor += item.costMinor
@@ -1549,6 +1535,7 @@ function ReportsPage() {
                     'Liste Toplamı',
                     'Ciro',
                     'İndirim',
+                    'Sepet İndirimi',
                     'FIFO Maliyeti',
                     'Brüt Kâr',
                     'Brüt Kâr Marjı (%)',
@@ -1567,19 +1554,13 @@ function ReportsPage() {
                     item.listUnitPriceMinor
 
                 const revenueMinor =
-                    item.quantity *
-                    item.actualUnitPriceMinor
+                    item.revenueMinor
 
                 const discountMinor =
-                    Math.max(
-                        0,
-                        item.listUnitPriceMinor -
-                        item.actualUnitPriceMinor,
-                    ) * item.quantity
+                    item.discountMinor
 
                 const grossProfitMinor =
-                    revenueMinor -
-                    item.costMinor
+                    item.grossProfitMinor
 
                 const grossMarginPercent =
                     revenueMinor > 0
@@ -1624,6 +1605,10 @@ function ReportsPage() {
 
                     formatCsvMoney(
                         discountMinor,
+                    ),
+
+                    formatCsvMoney(
+                        item.basketDiscountMinor ?? 0,
                     ),
 
                     formatCsvMoney(

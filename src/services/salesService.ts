@@ -13,6 +13,7 @@ export type CreateSaleItemInput = {
     listUnitPriceMinor?: number
     actualUnitPriceMinor?: number
 
+    basketDiscountMinor?: number
     discountReason?: string
 }
 
@@ -28,7 +29,12 @@ export type UpdateSaleInput =
 export type SaleHistoryItem =
     SaleItem & {
         productName: string
+
+        revenueMinor: number
+        discountMinor: number
+
         costMinor: number
+        grossProfitMinor: number
     }
 
 export type SaleHistoryRecord = {
@@ -118,6 +124,162 @@ function validateMoney(
     }
 }
 
+
+type SalePricingInput = {
+    quantity: number
+    listUnitPriceMinor: number
+    actualUnitPriceMinor: number
+    basketDiscountMinor?: number
+}
+
+export function getSaleItemRevenueMinor(
+    item: SalePricingInput,
+): number {
+    const baseRevenueMinor =
+        item.quantity *
+        item.actualUnitPriceMinor
+
+    return Math.max(
+        0,
+        baseRevenueMinor -
+        (item.basketDiscountMinor ?? 0),
+    )
+}
+
+export function getSaleItemDiscountMinor(
+    item: SalePricingInput,
+): number {
+    const unitDiscountMinor =
+        Math.max(
+            0,
+            item.listUnitPriceMinor -
+            item.actualUnitPriceMinor,
+        ) * item.quantity
+
+    return (
+        unitDiscountMinor +
+        (item.basketDiscountMinor ?? 0)
+    )
+}
+
+/*
+ * Sepet indirimi, satırların indirim öncesi tutarlarına
+ * göre oransal dağıtılır. Math.floor sonrası kalan kuruşlar
+ * en büyük kesir payına sahip satırlara birer kuruş verilerek
+ * dağıtılır; böylece kayıt toplamı hedef tutarla birebir eşleşir.
+ */
+export function distributeBasketDiscountMinor(
+    lineAmountsMinor: number[],
+    targetTotalMinor: number,
+): number[] {
+    if (
+        !Number.isSafeInteger(targetTotalMinor) ||
+        targetTotalMinor < 0
+    ) {
+        throw new Error(
+            'Geçerli bir sepet toplamı seçilmelidir.',
+        )
+    }
+
+    for (const amount of lineAmountsMinor) {
+        if (
+            !Number.isSafeInteger(amount) ||
+            amount < 0
+        ) {
+            throw new Error(
+                'Sepet satır tutarları geçersiz.',
+            )
+        }
+    }
+
+    const basketTotalMinor =
+        lineAmountsMinor.reduce(
+            (total, amount) =>
+                total + amount,
+            0,
+        )
+
+    if (targetTotalMinor > basketTotalMinor) {
+        throw new Error(
+            'Yuvarlanan tutar sepet toplamından büyük olamaz.',
+        )
+    }
+
+    const discountMinor =
+        basketTotalMinor -
+        targetTotalMinor
+
+    if (
+        discountMinor === 0 ||
+        basketTotalMinor === 0
+    ) {
+        return lineAmountsMinor.map(() => 0)
+    }
+
+    const allocations =
+        lineAmountsMinor.map((amount, index) => {
+            const exactShare =
+                discountMinor *
+                amount /
+                basketTotalMinor
+
+            const floorShare =
+                Math.floor(exactShare)
+
+            return {
+                index,
+                floorShare,
+                fraction:
+                    exactShare -
+                    floorShare,
+            }
+        })
+
+    let remainingMinor =
+        discountMinor -
+        allocations.reduce(
+            (total, item) =>
+                total +
+                item.floorShare,
+            0,
+        )
+
+    allocations.sort(
+        (first, second) =>
+            second.fraction -
+            first.fraction ||
+            first.index -
+            second.index,
+    )
+
+    for (
+        let index = 0;
+        remainingMinor > 0;
+        index += 1
+    ) {
+        const allocation =
+            allocations[
+            index %
+            allocations.length
+            ]
+
+        allocation.floorShare += 1
+        remainingMinor -= 1
+    }
+
+    const result =
+        new Array<number>(
+            lineAmountsMinor.length,
+        ).fill(0)
+
+    for (const allocation of allocations) {
+        result[allocation.index] =
+            allocation.floorShare
+    }
+
+    return result
+}
+
 function validateSaleItems(
     items: CreateSaleItemInput[],
 ): void {
@@ -186,6 +348,26 @@ async function buildSaleItems(
             actualUnitPriceMinor,
         )
 
+        const basketDiscountMinor =
+            input.basketDiscountMinor ?? 0
+
+        validateMoney(
+            basketDiscountMinor,
+        )
+
+        const baseRevenueMinor =
+            input.quantity *
+            actualUnitPriceMinor
+
+        if (
+            basketDiscountMinor >
+            baseRevenueMinor
+        ) {
+            throw new Error(
+                'Sepet indirimi ürün satırının tutarından büyük olamaz.',
+            )
+        }
+
         saleItems.push({
             id: createId(),
             saleId,
@@ -205,6 +387,11 @@ async function buildSaleItems(
 
             listUnitPriceMinor,
             actualUnitPriceMinor,
+
+            basketDiscountMinor:
+                basketDiscountMinor > 0
+                    ? basketDiscountMinor
+                    : undefined,
 
             discountReason:
                 normalizeOptionalText(
@@ -354,21 +541,42 @@ export const salesService = {
                 ).map(
                     (
                         item,
-                    ): SaleHistoryItem => ({
-                        ...item,
-
-                        productName:
-                            item.productNameSnapshot ??
-                            productNames.get(
-                                item.productId,
-                            ) ??
-                            'Bilinmeyen ürün',
-
-                        costMinor:
+                    ): SaleHistoryItem => {
+                        const costMinor =
                             costBySaleItem.get(
                                 item.id,
-                            ) ?? 0,
-                    }),
+                            ) ?? 0
+
+                        const revenueMinor =
+                            getSaleItemRevenueMinor(
+                                item,
+                            )
+
+                        const discountMinor =
+                            getSaleItemDiscountMinor(
+                                item,
+                            )
+
+                        return {
+                            ...item,
+
+                            productName:
+                                item.productNameSnapshot ??
+                                productNames.get(
+                                    item.productId,
+                                ) ??
+                                'Bilinmeyen ürün',
+
+                            revenueMinor,
+                            discountMinor,
+
+                            costMinor,
+
+                            grossProfitMinor:
+                                revenueMinor -
+                                costMinor,
+                        }
+                    },
                 )
 
                 const totalQuantity =
@@ -401,8 +609,7 @@ export const salesService = {
                             item,
                         ) =>
                             total +
-                            item.quantity *
-                            item.actualUnitPriceMinor,
+                            item.revenueMinor,
                         0,
                     )
 
@@ -411,20 +618,9 @@ export const salesService = {
                         (
                             total,
                             item,
-                        ) => {
-                            const difference =
-                                item.listUnitPriceMinor -
-                                item.actualUnitPriceMinor
-
-                            return (
-                                total +
-                                Math.max(
-                                    0,
-                                    difference,
-                                ) *
-                                item.quantity
-                            )
-                        },
+                        ) =>
+                            total +
+                            item.discountMinor,
                         0,
                     )
 

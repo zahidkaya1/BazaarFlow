@@ -23,6 +23,14 @@ export type SaleItem = {
     listUnitPriceMinor: number
     actualUnitPriceMinor: number
 
+    /*
+     * Sepet geneli yuvarlamadan bu satış satırına
+     * oransal olarak düşen toplam indirim tutarıdır.
+     * Birim fiyata bölünmez; böylece kuruş farkları
+     * satış toplamını bozmadan saklanabilir.
+     */
+    basketDiscountMinor?: number
+
     discountReason?: string
 
     createdAt: string
