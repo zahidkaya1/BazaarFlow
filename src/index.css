@@ -3983,3 +3983,223 @@ textarea:focus-visible {
     font-weight: 850;
   }
 }
+
+/* ===== MOBİL HIZLI STOK ===== */
+
+.mobile-inventory-view {
+  display: none;
+}
+
+.inventory-desktop-view {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .inventory-page .page-header {
+    margin-bottom: 16px;
+  }
+
+  .inventory-page .page-header .page-eyebrow {
+    display: none;
+  }
+
+  .inventory-page .page-header h1 {
+    font-size: 25px;
+  }
+
+  .inventory-page .page-header p {
+    display: none;
+  }
+
+  .inventory-desktop-view {
+    display: none;
+  }
+
+  .mobile-inventory-view {
+    display: block;
+  }
+
+  .mobile-stock-card {
+    overflow: hidden;
+
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+
+    background: var(--color-surface);
+    box-shadow: var(--shadow-card);
+  }
+
+  .mobile-stock-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    padding: 16px;
+
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .mobile-stock-card-icon {
+    width: 42px;
+    height: 42px;
+
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+
+    border-radius: 11px;
+
+    background: var(--color-primary-soft);
+    color: var(--color-secondary);
+  }
+
+  .mobile-stock-card-header>div {
+    min-width: 0;
+  }
+
+  .mobile-stock-card-header h2 {
+    margin: 0;
+
+    color: var(--color-text);
+
+    font-size: 17px;
+  }
+
+  .mobile-stock-card-header p {
+    margin: 4px 0 0;
+
+    color: var(--color-text-muted);
+
+    font-size: 10px;
+    line-height: 1.4;
+  }
+
+  .mobile-stock-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+
+    padding: 16px;
+  }
+
+  .mobile-stock-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .mobile-stock-field>span {
+    color: var(--color-text);
+
+    font-size: 11px;
+    font-weight: 750;
+  }
+
+  .mobile-stock-field select,
+  .mobile-stock-field input {
+    width: 100%;
+    min-height: 52px;
+
+    padding: 0 13px;
+
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+
+    outline: 0;
+
+    background: #ffffff;
+    color: var(--color-text);
+
+    font-size: 15px;
+  }
+
+  .mobile-stock-field select:focus,
+  .mobile-stock-field input:focus {
+    border-color: var(--color-secondary);
+
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.08);
+  }
+
+  .mobile-stock-current {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+
+    padding: 12px 13px;
+
+    border-radius: 10px;
+
+    background: var(--color-primary-soft);
+  }
+
+  .mobile-stock-current>div {
+    min-width: 0;
+
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .mobile-stock-current>div:last-child {
+    align-items: flex-end;
+
+    text-align: right;
+  }
+
+  .mobile-stock-current span {
+    color: var(--color-text-muted);
+
+    font-size: 9px;
+    font-weight: 650;
+  }
+
+  .mobile-stock-current strong {
+    overflow: hidden;
+
+    color: var(--color-secondary);
+
+    font-size: 13px;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-stock-submit {
+    min-height: 58px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    margin-top: 2px;
+
+    border: 0;
+    border-radius: 11px;
+
+    background: var(--color-secondary);
+    color: #ffffff;
+
+    font-size: 14px;
+    font-weight: 850;
+  }
+
+  .mobile-stock-submit:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  .mobile-stock-helper {
+    margin: 10px 4px 0;
+
+    color: var(--color-text-soft);
+
+    font-size: 9px;
+    line-height: 1.5;
+    text-align: center;
+  }
+
+  .inventory-page>.form-message {
+    margin-bottom: 12px;
+  }
+}

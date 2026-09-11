@@ -246,6 +246,16 @@ function InventoryPage() {
         return values
     }, [lots])
 
+    const selectedProduct =
+        productId
+            ? productMap.get(productId)
+            : undefined
+
+    const selectedProductStock =
+        selectedProduct
+            ? stockByProduct.get(selectedProduct.id) ?? 0
+            : null
+
     const selectedAdjustmentProduct =
         useMemo(
             () =>
@@ -483,6 +493,57 @@ function InventoryPage() {
         }
     }
 
+    async function handleMobileStockSubmit(
+        event: FormEvent<HTMLFormElement>,
+    ) {
+        event.preventDefault()
+
+        setMessage('')
+        setError('')
+
+        try {
+            if (!productId) {
+                throw new Error('Stok eklenecek ürünü seçin.')
+            }
+
+            const quantity = Number(quantityReceived)
+
+            if (
+                !Number.isSafeInteger(quantity) ||
+                quantity <= 0
+            ) {
+                throw new Error(
+                    'Stok adedi sıfırdan büyük tam sayı olmalıdır.',
+                )
+            }
+
+            const unitCostMinor =
+                parseMoneyToMinor(unitCost)
+
+            await inventoryService.create({
+                productId,
+                entryType: 'purchase',
+                purchaseDate: getTodayDateValue(),
+                quantityReceived: quantity,
+                unitCostMinor,
+                note: '',
+            })
+
+            setQuantityReceived('')
+            setUnitCost('')
+
+            setMessage(
+                `${selectedProduct?.name ?? 'Ürün'} stoğa eklendi • ${quantity} adet`,
+            )
+        } catch (caughtError) {
+            setError(
+                caughtError instanceof Error
+                    ? caughtError.message
+                    : 'Stok girişi kaydedilemedi.',
+            )
+        }
+    }
+
     async function handleAdjustmentSubmit(
         event: FormEvent<HTMLFormElement>,
     ) {
@@ -549,7 +610,7 @@ function InventoryPage() {
     }
 
     return (
-        <div className="dashboard">
+        <div className="dashboard inventory-page">
             <header className="page-header">
                 <span className="page-eyebrow">
                     BazaarFlow
@@ -576,167 +637,32 @@ function InventoryPage() {
                 </div>
             )}
 
-            <section className="inventory-summary-grid">
-                <article className="summary-card">
-                    <div className="summary-card-header">
-                        <span className="summary-card-icon">
-                            <Boxes
-                                size={21}
-                                strokeWidth={1.8}
-                            />
+            <section className="mobile-inventory-view">
+                <article className="mobile-stock-card">
+                    <div className="mobile-stock-card-header">
+                        <span className="mobile-stock-card-icon">
+                            <PackagePlus size={22} strokeWidth={1.9} />
                         </span>
 
-                        <span className="summary-card-title">
-                            Mevcut Stok
-                        </span>
-                    </div>
-
-                    <strong className="summary-card-value">
-                        {totalQuantity}
-                    </strong>
-
-                    <span className="summary-card-description">
-                        Eldeki toplam ürün adedi
-                    </span>
-                </article>
-
-                <article className="summary-card">
-                    <div className="summary-card-header">
-                        <span className="summary-card-icon">
-                            <PackagePlus
-                                size={21}
-                                strokeWidth={1.8}
-                            />
-                        </span>
-
-                        <span className="summary-card-title">
-                            Stok Maliyeti
-                        </span>
-                    </div>
-
-                    <strong className="summary-card-value">
-                        {formatMoneyFromMinor(
-                            totalInventoryValueMinor,
-                        )}
-                    </strong>
-
-                    <span className="summary-card-description">
-                        Eldeki ürünlerin toplam alış
-                        maliyeti
-                    </span>
-                </article>
-
-                <article className="summary-card">
-                    <div className="summary-card-header">
-                        <span
-                            className={`summary-card-icon ${lowStockProducts.length > 0
-                                ? 'summary-card-icon-warning'
-                                : ''
-                                }`}
-                        >
-                            <AlertTriangle
-                                size={21}
-                                strokeWidth={1.8}
-                            />
-                        </span>
-
-                        <span className="summary-card-title">
-                            Düşük Stok
-                        </span>
-                    </div>
-
-                    <strong className="summary-card-value">
-                        {lowStockProducts.length}
-                    </strong>
-
-                    <span className="summary-card-description">
-                        Minimum seviyeye ulaşan aktif
-                        ürün
-                    </span>
-                </article>
-
-                <article className="summary-card">
-                    <div className="summary-card-header">
-                        <span className="summary-card-icon">
-                            <Boxes
-                                size={21}
-                                strokeWidth={1.8}
-                            />
-                        </span>
-
-                        <span className="summary-card-title">
-                            Stokta Ürün
-                        </span>
-                    </div>
-
-                    <strong className="summary-card-value">
-                        {activeStockedProductCount}
-                    </strong>
-
-                    <span className="summary-card-description">
-                        Stoğu bulunan aktif ürün çeşidi
-                    </span>
-                </article>
-            </section>
-
-            <section className="inventory-layout">
-                <article className="dashboard-panel">
-                    <div className="panel-header">
                         <div>
-                            <h2>Stok Girişi</h2>
-
+                            <h2>Stok Ekle</h2>
                             <p>
-                                Normal alım veya uygulama
-                                öncesinden kalan açılış
-                                stoku ekleyin.
+                                Ürünü seçin, adedi ve alış fiyatını girin.
                             </p>
                         </div>
                     </div>
 
                     <form
-                        className="management-form"
-                        onSubmit={handleSubmit}
+                        className="mobile-stock-form"
+                        onSubmit={handleMobileStockSubmit}
                     >
-                        <label className="form-field">
-                            <span>Giriş türü</span>
-
-                            <select
-                                value={entryType}
-                                onChange={(event) =>
-                                    setEntryType(
-                                        event.target
-                                            .value as InventoryEntryType,
-                                    )
-                                }
-                            >
-                                <option value="purchase">
-                                    Normal Stok Alımı
-                                </option>
-
-                                <option value="opening">
-                                    Açılış Stoku
-                                </option>
-                            </select>
-                        </label>
-
-                        {entryType === 'opening' && (
-                            <div className="inventory-info-box">
-                                Açılış stoku, BazaarFlow'u
-                                kullanmaya başlamadan önce
-                                elinizde bulunan ürünleri
-                                sisteme aktarmak içindir.
-                            </div>
-                        )}
-
-                        <label className="form-field">
+                        <label className="mobile-stock-field">
                             <span>Ürün</span>
 
                             <select
                                 value={productId}
                                 onChange={(event) =>
-                                    setProductId(
-                                        event.target.value,
-                                    )
+                                    setProductId(event.target.value)
                                 }
                                 required
                             >
@@ -760,513 +686,923 @@ function InventoryPage() {
                             </select>
                         </label>
 
-                        <label className="form-field">
-                            <span>
-                                {entryType === 'opening'
-                                    ? 'Açılış tarihi'
-                                    : 'Alış tarihi'}
-                            </span>
+                        {selectedProduct && (
+                            <div className="mobile-stock-current">
+                                <div>
+                                    <span>Seçili ürün</span>
+                                    <strong>
+                                        {selectedProduct.name}
+                                    </strong>
+                                </div>
+
+                                <div>
+                                    <span>Mevcut stok</span>
+                                    <strong>
+                                        {selectedProductStock ?? 0} adet
+                                    </strong>
+                                </div>
+                            </div>
+                        )}
+
+                        <label className="mobile-stock-field">
+                            <span>Adet</span>
 
                             <input
-                                type="date"
-                                value={purchaseDate}
+                                type="number"
+                                min="1"
+                                step="1"
+                                inputMode="numeric"
+                                value={quantityReceived}
                                 onChange={(event) =>
-                                    setPurchaseDate(
+                                    setQuantityReceived(
                                         event.target.value,
                                     )
                                 }
+                                placeholder="Örn. 20"
                                 required
                             />
                         </label>
 
-                        <div className="form-row">
-                            <label className="form-field">
-                                <span>
-                                    {entryType === 'opening'
-                                        ? 'Mevcut adet'
-                                        : 'Alınan adet'}
-                                </span>
-
-                                <input
-                                    type="number"
-                                    min="1"
-                                    step="1"
-                                    value={quantityReceived}
-                                    onChange={(event) =>
-                                        setQuantityReceived(
-                                            event.target.value,
-                                        )
-                                    }
-                                    placeholder="Örn. 30"
-                                    required
-                                />
-                            </label>
-
-                            <label className="form-field">
-                                <span>Birim maliyet</span>
-
-                                <input
-                                    type="text"
-                                    inputMode="decimal"
-                                    value={unitCost}
-                                    onChange={(event) =>
-                                        setUnitCost(
-                                            event.target.value,
-                                        )
-                                    }
-                                    placeholder="Örn. 35,00"
-                                    required
-                                />
-                            </label>
-                        </div>
-
-                        <label className="form-field">
-                            <span>Not</span>
+                        <label className="mobile-stock-field">
+                            <span>Alış fiyatı / adet</span>
 
                             <input
                                 type="text"
-                                value={note}
+                                inputMode="decimal"
+                                value={unitCost}
                                 onChange={(event) =>
-                                    setNote(event.target.value)
+                                    setUnitCost(event.target.value)
                                 }
-                                placeholder="İsteğe bağlı"
+                                placeholder="Örn. 35,00"
+                                required
                             />
                         </label>
 
                         <button
-                            className="primary-button"
                             type="submit"
+                            className="mobile-stock-submit"
+                            disabled={
+                                !productId ||
+                                !quantityReceived ||
+                                !unitCost
+                            }
                         >
-                            <PackagePlus size={18} />
-
-                            {entryType === 'opening'
-                                ? 'Açılış Stoku Ekle'
-                                : 'Stok Alımı Ekle'}
+                            <PackagePlus size={19} />
+                            STOKA EKLE
                         </button>
                     </form>
                 </article>
 
-                <article className="dashboard-panel">
-                    <div className="panel-header">
-                        <div>
-                            <h2>Mevcut Stoklar</h2>
+                <p className="mobile-stock-helper">
+                    Bugünün tarihiyle normal stok alımı olarak kaydedilir.
+                    Her giriş FIFO için ayrı bir stok partisi oluşturur.
+                </p>
+            </section>
 
-                            <p>
-                                Ürün bazında stok, maliyet
-                                ve minimum stok seviyeleri.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="inventory-stock-toolbar">
-                        <label className="inventory-search-field">
-                            <Search size={16} />
-
-                            <input
-                                type="search"
-                                value={stockSearch}
-                                onChange={(event) =>
-                                    setStockSearch(
-                                        event.target.value,
-                                    )
-                                }
-                                placeholder="Ürün veya SKU ara..."
-                            />
-                        </label>
-
-                        <div className="inventory-filter-options">
-                            <label className="inventory-filter-option">
-                                <input
-                                    type="checkbox"
-                                    checked={
-                                        showPassiveProducts
-                                    }
-                                    onChange={(event) =>
-                                        setShowPassiveProducts(
-                                            event.target.checked,
-                                        )
-                                    }
+            <div className="inventory-desktop-view">
+                <section className="inventory-summary-grid">
+                    <article className="summary-card">
+                        <div className="summary-card-header">
+                            <span className="summary-card-icon">
+                                <Boxes
+                                    size={21}
+                                    strokeWidth={1.8}
                                 />
+                            </span>
 
-                                <span>
-                                    Pasif ürünleri göster
-                                </span>
-                            </label>
-
-                            <label className="inventory-filter-option">
-                                <input
-                                    type="checkbox"
-                                    checked={
-                                        showZeroStockProducts
-                                    }
-                                    onChange={(event) =>
-                                        setShowZeroStockProducts(
-                                            event.target.checked,
-                                        )
-                                    }
-                                />
-
-                                <span>
-                                    Sıfır stokları göster
-                                </span>
-                            </label>
+                            <span className="summary-card-title">
+                                Mevcut Stok
+                            </span>
                         </div>
-                    </div>
 
-                    {products.length === 0 ? (
-                        <div className="empty-state empty-state-compact">
+                        <strong className="summary-card-value">
+                            {totalQuantity}
+                        </strong>
+
+                        <span className="summary-card-description">
+                            Eldeki toplam ürün adedi
+                        </span>
+                    </article>
+
+                    <article className="summary-card">
+                        <div className="summary-card-header">
+                            <span className="summary-card-icon">
+                                <PackagePlus
+                                    size={21}
+                                    strokeWidth={1.8}
+                                />
+                            </span>
+
+                            <span className="summary-card-title">
+                                Stok Maliyeti
+                            </span>
+                        </div>
+
+                        <strong className="summary-card-value">
+                            {formatMoneyFromMinor(
+                                totalInventoryValueMinor,
+                            )}
+                        </strong>
+
+                        <span className="summary-card-description">
+                            Eldeki ürünlerin toplam alış
+                            maliyeti
+                        </span>
+                    </article>
+
+                    <article className="summary-card">
+                        <div className="summary-card-header">
+                            <span
+                                className={`summary-card-icon ${lowStockProducts.length > 0
+                                    ? 'summary-card-icon-warning'
+                                    : ''
+                                    }`}
+                            >
+                                <AlertTriangle
+                                    size={21}
+                                    strokeWidth={1.8}
+                                />
+                            </span>
+
+                            <span className="summary-card-title">
+                                Düşük Stok
+                            </span>
+                        </div>
+
+                        <strong className="summary-card-value">
+                            {lowStockProducts.length}
+                        </strong>
+
+                        <span className="summary-card-description">
+                            Minimum seviyeye ulaşan aktif
+                            ürün
+                        </span>
+                    </article>
+
+                    <article className="summary-card">
+                        <div className="summary-card-header">
+                            <span className="summary-card-icon">
+                                <Boxes
+                                    size={21}
+                                    strokeWidth={1.8}
+                                />
+                            </span>
+
+                            <span className="summary-card-title">
+                                Stokta Ürün
+                            </span>
+                        </div>
+
+                        <strong className="summary-card-value">
+                            {activeStockedProductCount}
+                        </strong>
+
+                        <span className="summary-card-description">
+                            Stoğu bulunan aktif ürün çeşidi
+                        </span>
+                    </article>
+                </section>
+
+                <section className="inventory-layout">
+                    <article className="dashboard-panel">
+                        <div className="panel-header">
                             <div>
-                                <strong>
-                                    Henüz ürün bulunmuyor
-                                </strong>
+                                <h2>Stok Girişi</h2>
 
                                 <p>
-                                    Stok eklemek için önce bir
-                                    ürün oluşturun.
+                                    Normal alım veya uygulama
+                                    öncesinden kalan açılış
+                                    stoku ekleyin.
                                 </p>
                             </div>
                         </div>
-                    ) : filteredProducts.length === 0 ? (
-                        <div className="inventory-filter-empty">
-                            <strong>
-                                Filtreye uygun ürün bulunamadı
-                            </strong>
 
-                            <span>
-                                Arama veya görünürlük
-                                filtrelerini değiştirebilirsiniz.
-                            </span>
-                        </div>
-                    ) : (
-                        <div className="stock-list">
-                            {filteredProducts.map(
-                                (product) => {
-                                    const currentStock =
-                                        stockByProduct.get(
-                                            product.id,
-                                        ) ?? 0
-
-                                    const stockValueMinor =
-                                        stockValueByProduct.get(
-                                            product.id,
-                                        ) ?? 0
-
-                                    const isLowStock =
-                                        product.isActive &&
-                                        product.minimumStock > 0 &&
-                                        currentStock <=
-                                        product.minimumStock
-
-                                    return (
-                                        <div
-                                            key={product.id}
-                                            className={`stock-list-item stock-list-item-detailed ${isLowStock
-                                                ? 'stock-list-item-low'
-                                                : ''
-                                                }`}
-                                        >
-                                            <div className="stock-product-details">
-                                                <div className="stock-product-title-row">
-                                                    <strong>
-                                                        {product.name}
-                                                    </strong>
-
-                                                    {product.sku && (
-                                                        <span className="stock-product-sku">
-                                                            {product.sku}
-                                                        </span>
-                                                    )}
-
-                                                    {!product.isActive && (
-                                                        <span className="stock-product-passive">
-                                                            Pasif
-                                                        </span>
-                                                    )}
-
-                                                    {isLowStock && (
-                                                        <span className="stock-low-badge">
-                                                            <AlertTriangle
-                                                                size={12}
-                                                            />
-                                                            Düşük Stok
-                                                        </span>
-                                                    )}
-                                                </div>
-
-                                                <div className="stock-product-meta">
-                                                    <span>
-                                                        Minimum stok:{' '}
-                                                        <strong>
-                                                            {
-                                                                product.minimumStock
-                                                            }
-                                                        </strong>
-                                                    </span>
-
-                                                    <span>
-                                                        Stok değeri:{' '}
-                                                        <strong>
-                                                            {formatMoneyFromMinor(
-                                                                stockValueMinor,
-                                                            )}
-                                                        </strong>
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <div className="stock-product-quantity">
-                                                <strong>
-                                                    {currentStock}
-                                                </strong>
-
-                                                <span>adet</span>
-                                            </div>
-                                        </div>
-                                    )
-                                },
-                            )}
-                        </div>
-                    )}
-                </article>
-            </section>
-
-            <section className="inventory-layout inventory-adjustment-layout">
-                <article className="dashboard-panel">
-                    <div className="panel-header">
-                        <div>
-                            <h2>Stok Düzeltme</h2>
-
-                            <p>
-                                Sayım farkı, hasar, kayıp veya
-                                benzeri nedenlerle stoğu kayıtlı
-                                şekilde artırın ya da azaltın.
-                            </p>
-                        </div>
-                    </div>
-
-                    {(adjustmentMessage ||
-                        adjustmentError) && (
-                            <div
-                                className={`form-message adjustment-form-message ${adjustmentError
-                                    ? 'form-message-error'
-                                    : 'form-message-success'
-                                    }`}
-                                role="status"
-                                aria-live="polite"
-                            >
-                                {adjustmentError ||
-                                    adjustmentMessage}
-                            </div>
-                        )}
-
-                    <form
-                        className="management-form"
-                        onSubmit={handleAdjustmentSubmit}
-                    >
-                        <label className="form-field">
-                            <span>Düzeltme türü</span>
-
-                            <select
-                                value={adjustmentDirection}
-                                onChange={(event) => {
-                                    setAdjustmentDirection(
-                                        event.target
-                                            .value as InventoryAdjustmentDirection,
-                                    )
-
-                                    setAdjustmentUnitCost('')
-                                    setAdjustmentMessage('')
-                                    setAdjustmentError('')
-                                }}
-                            >
-                                <option value="decrease">
-                                    Stok Azalt
-                                </option>
-
-                                <option value="increase">
-                                    Stok Artır
-                                </option>
-                            </select>
-                        </label>
-
-                        <div className="inventory-info-box">
-                            {adjustmentDirection ===
-                                'increase'
-                                ? 'Stok artışı, girdiğiniz birim maliyetle yeni bir FIFO partisi oluşturur.'
-                                : 'Stok azalışı, seçilen tarihte mevcut FIFO partilerinden kronolojik sırayla düşülür.'}
-                        </div>
-
-                        <label className="form-field">
-                            <span>Ürün</span>
-
-                            <select
-                                value={adjustmentProductId}
-                                onChange={(event) =>
-                                    setAdjustmentProductId(
-                                        event.target.value,
-                                    )
-                                }
-                                required
-                            >
-                                <option value="">
-                                    Ürün seçin
-                                </option>
-
-                                {products.map((product) => (
-                                    <option
-                                        key={product.id}
-                                        value={product.id}
-                                    >
-                                        {product.name}
-                                        {product.sku
-                                            ? ` · ${product.sku}`
-                                            : ''}
-                                        {!product.isActive
-                                            ? ' (Pasif)'
-                                            : ''}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-
-                        {selectedAdjustmentProduct && (
-                            <div className="adjustment-stock-preview">
-                                <span>
-                                    Güncel stok
-                                </span>
-
-                                <strong>
-                                    {selectedAdjustmentStock ??
-                                        0}{' '}
-                                    adet
-                                </strong>
-                            </div>
-                        )}
-
-                        <label className="form-field">
-                            <span>Düzeltme tarihi</span>
-
-                            <input
-                                type="date"
-                                value={adjustmentDate}
-                                onChange={(event) =>
-                                    setAdjustmentDate(
-                                        event.target.value,
-                                    )
-                                }
-                                required
-                            />
-                        </label>
-
-                        <div className="form-row">
+                        <form
+                            className="management-form"
+                            onSubmit={handleSubmit}
+                        >
                             <label className="form-field">
-                                <span>Adet</span>
+                                <span>Giriş türü</span>
 
-                                <input
-                                    type="number"
-                                    min="1"
-                                    step="1"
-                                    value={adjustmentQuantity}
+                                <select
+                                    value={entryType}
                                     onChange={(event) =>
-                                        setAdjustmentQuantity(
+                                        setEntryType(
+                                            event.target
+                                                .value as InventoryEntryType,
+                                        )
+                                    }
+                                >
+                                    <option value="purchase">
+                                        Normal Stok Alımı
+                                    </option>
+
+                                    <option value="opening">
+                                        Açılış Stoku
+                                    </option>
+                                </select>
+                            </label>
+
+                            {entryType === 'opening' && (
+                                <div className="inventory-info-box">
+                                    Açılış stoku, BazaarFlow'u
+                                    kullanmaya başlamadan önce
+                                    elinizde bulunan ürünleri
+                                    sisteme aktarmak içindir.
+                                </div>
+                            )}
+
+                            <label className="form-field">
+                                <span>Ürün</span>
+
+                                <select
+                                    value={productId}
+                                    onChange={(event) =>
+                                        setProductId(
                                             event.target.value,
                                         )
                                     }
-                                    placeholder="Örn. 3"
+                                    required
+                                >
+                                    <option value="">
+                                        Ürün seçin
+                                    </option>
+
+                                    {activeProducts.map(
+                                        (product) => (
+                                            <option
+                                                key={product.id}
+                                                value={product.id}
+                                            >
+                                                {product.name}
+                                                {product.sku
+                                                    ? ` · ${product.sku}`
+                                                    : ''}
+                                            </option>
+                                        ),
+                                    )}
+                                </select>
+                            </label>
+
+                            <label className="form-field">
+                                <span>
+                                    {entryType === 'opening'
+                                        ? 'Açılış tarihi'
+                                        : 'Alış tarihi'}
+                                </span>
+
+                                <input
+                                    type="date"
+                                    value={purchaseDate}
+                                    onChange={(event) =>
+                                        setPurchaseDate(
+                                            event.target.value,
+                                        )
+                                    }
                                     required
                                 />
                             </label>
 
-                            {adjustmentDirection ===
-                                'increase' && (
-                                    <label className="form-field">
-                                        <span>
-                                            Birim maliyet
-                                        </span>
+                            <div className="form-row">
+                                <label className="form-field">
+                                    <span>
+                                        {entryType === 'opening'
+                                            ? 'Mevcut adet'
+                                            : 'Alınan adet'}
+                                    </span>
 
-                                        <input
-                                            type="text"
-                                            inputMode="decimal"
-                                            value={
-                                                adjustmentUnitCost
-                                            }
-                                            onChange={(event) =>
-                                                setAdjustmentUnitCost(
-                                                    event.target
-                                                        .value,
-                                                )
-                                            }
-                                            placeholder="Örn. 45,00"
-                                            required
-                                        />
-                                    </label>
-                                )}
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        step="1"
+                                        value={quantityReceived}
+                                        onChange={(event) =>
+                                            setQuantityReceived(
+                                                event.target.value,
+                                            )
+                                        }
+                                        placeholder="Örn. 30"
+                                        required
+                                    />
+                                </label>
+
+                                <label className="form-field">
+                                    <span>Birim maliyet</span>
+
+                                    <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={unitCost}
+                                        onChange={(event) =>
+                                            setUnitCost(
+                                                event.target.value,
+                                            )
+                                        }
+                                        placeholder="Örn. 35,00"
+                                        required
+                                    />
+                                </label>
+                            </div>
+
+                            <label className="form-field">
+                                <span>Not</span>
+
+                                <input
+                                    type="text"
+                                    value={note}
+                                    onChange={(event) =>
+                                        setNote(event.target.value)
+                                    }
+                                    placeholder="İsteğe bağlı"
+                                />
+                            </label>
+
+                            <button
+                                className="primary-button"
+                                type="submit"
+                            >
+                                <PackagePlus size={18} />
+
+                                {entryType === 'opening'
+                                    ? 'Açılış Stoku Ekle'
+                                    : 'Stok Alımı Ekle'}
+                            </button>
+                        </form>
+                    </article>
+
+                    <article className="dashboard-panel">
+                        <div className="panel-header">
+                            <div>
+                                <h2>Mevcut Stoklar</h2>
+
+                                <p>
+                                    Ürün bazında stok, maliyet
+                                    ve minimum stok seviyeleri.
+                                </p>
+                            </div>
                         </div>
 
-                        <label className="form-field">
-                            <span>Neden</span>
+                        <div className="inventory-stock-toolbar">
+                            <label className="inventory-search-field">
+                                <Search size={16} />
 
-                            <input
-                                type="text"
-                                value={adjustmentReason}
-                                onChange={(event) =>
-                                    setAdjustmentReason(
-                                        event.target.value,
-                                    )
-                                }
-                                placeholder={
-                                    adjustmentDirection ===
-                                        'increase'
-                                        ? 'Örn. Sayım fazlası'
-                                        : 'Örn. Hasarlı ürün'
-                                }
-                                required
-                            />
-                        </label>
+                                <input
+                                    type="search"
+                                    value={stockSearch}
+                                    onChange={(event) =>
+                                        setStockSearch(
+                                            event.target.value,
+                                        )
+                                    }
+                                    placeholder="Ürün veya SKU ara..."
+                                />
+                            </label>
 
-                        <label className="form-field">
-                            <span>Not</span>
+                            <div className="inventory-filter-options">
+                                <label className="inventory-filter-option">
+                                    <input
+                                        type="checkbox"
+                                        checked={
+                                            showPassiveProducts
+                                        }
+                                        onChange={(event) =>
+                                            setShowPassiveProducts(
+                                                event.target.checked,
+                                            )
+                                        }
+                                    />
 
-                            <input
-                                type="text"
-                                value={adjustmentNote}
-                                onChange={(event) =>
-                                    setAdjustmentNote(
-                                        event.target.value,
-                                    )
-                                }
-                                placeholder="İsteğe bağlı"
-                            />
-                        </label>
+                                    <span>
+                                        Pasif ürünleri göster
+                                    </span>
+                                </label>
 
-                        <button
-                            className="primary-button"
-                            type="submit"
-                        >
-                            {adjustmentDirection ===
-                                'increase' ? (
-                                <Plus size={18} />
-                            ) : (
-                                <Minus size={18} />
+                                <label className="inventory-filter-option">
+                                    <input
+                                        type="checkbox"
+                                        checked={
+                                            showZeroStockProducts
+                                        }
+                                        onChange={(event) =>
+                                            setShowZeroStockProducts(
+                                                event.target.checked,
+                                            )
+                                        }
+                                    />
+
+                                    <span>
+                                        Sıfır stokları göster
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+
+                        {products.length === 0 ? (
+                            <div className="empty-state empty-state-compact">
+                                <div>
+                                    <strong>
+                                        Henüz ürün bulunmuyor
+                                    </strong>
+
+                                    <p>
+                                        Stok eklemek için önce bir
+                                        ürün oluşturun.
+                                    </p>
+                                </div>
+                            </div>
+                        ) : filteredProducts.length === 0 ? (
+                            <div className="inventory-filter-empty">
+                                <strong>
+                                    Filtreye uygun ürün bulunamadı
+                                </strong>
+
+                                <span>
+                                    Arama veya görünürlük
+                                    filtrelerini değiştirebilirsiniz.
+                                </span>
+                            </div>
+                        ) : (
+                            <div className="stock-list">
+                                {filteredProducts.map(
+                                    (product) => {
+                                        const currentStock =
+                                            stockByProduct.get(
+                                                product.id,
+                                            ) ?? 0
+
+                                        const stockValueMinor =
+                                            stockValueByProduct.get(
+                                                product.id,
+                                            ) ?? 0
+
+                                        const isLowStock =
+                                            product.isActive &&
+                                            product.minimumStock > 0 &&
+                                            currentStock <=
+                                            product.minimumStock
+
+                                        return (
+                                            <div
+                                                key={product.id}
+                                                className={`stock-list-item stock-list-item-detailed ${isLowStock
+                                                    ? 'stock-list-item-low'
+                                                    : ''
+                                                    }`}
+                                            >
+                                                <div className="stock-product-details">
+                                                    <div className="stock-product-title-row">
+                                                        <strong>
+                                                            {product.name}
+                                                        </strong>
+
+                                                        {product.sku && (
+                                                            <span className="stock-product-sku">
+                                                                {product.sku}
+                                                            </span>
+                                                        )}
+
+                                                        {!product.isActive && (
+                                                            <span className="stock-product-passive">
+                                                                Pasif
+                                                            </span>
+                                                        )}
+
+                                                        {isLowStock && (
+                                                            <span className="stock-low-badge">
+                                                                <AlertTriangle
+                                                                    size={12}
+                                                                />
+                                                                Düşük Stok
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="stock-product-meta">
+                                                        <span>
+                                                            Minimum stok:{' '}
+                                                            <strong>
+                                                                {
+                                                                    product.minimumStock
+                                                                }
+                                                            </strong>
+                                                        </span>
+
+                                                        <span>
+                                                            Stok değeri:{' '}
+                                                            <strong>
+                                                                {formatMoneyFromMinor(
+                                                                    stockValueMinor,
+                                                                )}
+                                                            </strong>
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="stock-product-quantity">
+                                                    <strong>
+                                                        {currentStock}
+                                                    </strong>
+
+                                                    <span>adet</span>
+                                                </div>
+                                            </div>
+                                        )
+                                    },
+                                )}
+                            </div>
+                        )}
+                    </article>
+                </section>
+
+                <section className="inventory-layout inventory-adjustment-layout">
+                    <article className="dashboard-panel">
+                        <div className="panel-header">
+                            <div>
+                                <h2>Stok Düzeltme</h2>
+
+                                <p>
+                                    Sayım farkı, hasar, kayıp veya
+                                    benzeri nedenlerle stoğu kayıtlı
+                                    şekilde artırın ya da azaltın.
+                                </p>
+                            </div>
+                        </div>
+
+                        {(adjustmentMessage ||
+                            adjustmentError) && (
+                                <div
+                                    className={`form-message adjustment-form-message ${adjustmentError
+                                        ? 'form-message-error'
+                                        : 'form-message-success'
+                                        }`}
+                                    role="status"
+                                    aria-live="polite"
+                                >
+                                    {adjustmentError ||
+                                        adjustmentMessage}
+                                </div>
                             )}
 
-                            {adjustmentDirection ===
-                                'increase'
-                                ? 'Stok Artışını Kaydet'
-                                : 'Stok Azalışını Kaydet'}
-                        </button>
-                    </form>
-                </article>
+                        <form
+                            className="management-form"
+                            onSubmit={handleAdjustmentSubmit}
+                        >
+                            <label className="form-field">
+                                <span>Düzeltme türü</span>
 
-                <article className="dashboard-panel">
+                                <select
+                                    value={adjustmentDirection}
+                                    onChange={(event) => {
+                                        setAdjustmentDirection(
+                                            event.target
+                                                .value as InventoryAdjustmentDirection,
+                                        )
+
+                                        setAdjustmentUnitCost('')
+                                        setAdjustmentMessage('')
+                                        setAdjustmentError('')
+                                    }}
+                                >
+                                    <option value="decrease">
+                                        Stok Azalt
+                                    </option>
+
+                                    <option value="increase">
+                                        Stok Artır
+                                    </option>
+                                </select>
+                            </label>
+
+                            <div className="inventory-info-box">
+                                {adjustmentDirection ===
+                                    'increase'
+                                    ? 'Stok artışı, girdiğiniz birim maliyetle yeni bir FIFO partisi oluşturur.'
+                                    : 'Stok azalışı, seçilen tarihte mevcut FIFO partilerinden kronolojik sırayla düşülür.'}
+                            </div>
+
+                            <label className="form-field">
+                                <span>Ürün</span>
+
+                                <select
+                                    value={adjustmentProductId}
+                                    onChange={(event) =>
+                                        setAdjustmentProductId(
+                                            event.target.value,
+                                        )
+                                    }
+                                    required
+                                >
+                                    <option value="">
+                                        Ürün seçin
+                                    </option>
+
+                                    {products.map((product) => (
+                                        <option
+                                            key={product.id}
+                                            value={product.id}
+                                        >
+                                            {product.name}
+                                            {product.sku
+                                                ? ` · ${product.sku}`
+                                                : ''}
+                                            {!product.isActive
+                                                ? ' (Pasif)'
+                                                : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+
+                            {selectedAdjustmentProduct && (
+                                <div className="adjustment-stock-preview">
+                                    <span>
+                                        Güncel stok
+                                    </span>
+
+                                    <strong>
+                                        {selectedAdjustmentStock ??
+                                            0}{' '}
+                                        adet
+                                    </strong>
+                                </div>
+                            )}
+
+                            <label className="form-field">
+                                <span>Düzeltme tarihi</span>
+
+                                <input
+                                    type="date"
+                                    value={adjustmentDate}
+                                    onChange={(event) =>
+                                        setAdjustmentDate(
+                                            event.target.value,
+                                        )
+                                    }
+                                    required
+                                />
+                            </label>
+
+                            <div className="form-row">
+                                <label className="form-field">
+                                    <span>Adet</span>
+
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        step="1"
+                                        value={adjustmentQuantity}
+                                        onChange={(event) =>
+                                            setAdjustmentQuantity(
+                                                event.target.value,
+                                            )
+                                        }
+                                        placeholder="Örn. 3"
+                                        required
+                                    />
+                                </label>
+
+                                {adjustmentDirection ===
+                                    'increase' && (
+                                        <label className="form-field">
+                                            <span>
+                                                Birim maliyet
+                                            </span>
+
+                                            <input
+                                                type="text"
+                                                inputMode="decimal"
+                                                value={
+                                                    adjustmentUnitCost
+                                                }
+                                                onChange={(event) =>
+                                                    setAdjustmentUnitCost(
+                                                        event.target
+                                                            .value,
+                                                    )
+                                                }
+                                                placeholder="Örn. 45,00"
+                                                required
+                                            />
+                                        </label>
+                                    )}
+                            </div>
+
+                            <label className="form-field">
+                                <span>Neden</span>
+
+                                <input
+                                    type="text"
+                                    value={adjustmentReason}
+                                    onChange={(event) =>
+                                        setAdjustmentReason(
+                                            event.target.value,
+                                        )
+                                    }
+                                    placeholder={
+                                        adjustmentDirection ===
+                                            'increase'
+                                            ? 'Örn. Sayım fazlası'
+                                            : 'Örn. Hasarlı ürün'
+                                    }
+                                    required
+                                />
+                            </label>
+
+                            <label className="form-field">
+                                <span>Not</span>
+
+                                <input
+                                    type="text"
+                                    value={adjustmentNote}
+                                    onChange={(event) =>
+                                        setAdjustmentNote(
+                                            event.target.value,
+                                        )
+                                    }
+                                    placeholder="İsteğe bağlı"
+                                />
+                            </label>
+
+                            <button
+                                className="primary-button"
+                                type="submit"
+                            >
+                                {adjustmentDirection ===
+                                    'increase' ? (
+                                    <Plus size={18} />
+                                ) : (
+                                    <Minus size={18} />
+                                )}
+
+                                {adjustmentDirection ===
+                                    'increase'
+                                    ? 'Stok Artışını Kaydet'
+                                    : 'Stok Azalışını Kaydet'}
+                            </button>
+                        </form>
+                    </article>
+
+                    <article className="dashboard-panel">
+                        <div className="panel-header inventory-history-header">
+                            <div>
+                                <h2>Düzeltme Geçmişi</h2>
+
+                                <p>
+                                    {filteredAdjustments.length} /{' '}
+                                    {adjustments.length} düzeltme
+                                    kaydı gösteriliyor.
+                                </p>
+                            </div>
+
+                            <label className="inventory-search-field inventory-history-search">
+                                <Search size={16} />
+
+                                <input
+                                    type="search"
+                                    value={adjustmentSearch}
+                                    onChange={(event) =>
+                                        setAdjustmentSearch(
+                                            event.target.value,
+                                        )
+                                    }
+                                    placeholder="Düzeltmelerde ara..."
+                                />
+                            </label>
+                        </div>
+
+                        {adjustments.length === 0 ? (
+                            <div className="empty-state empty-state-compact">
+                                <div className="empty-state-icon">
+                                    <History
+                                        size={30}
+                                        strokeWidth={1.5}
+                                    />
+                                </div>
+
+                                <div>
+                                    <strong>
+                                        Henüz stok düzeltmesi yok
+                                    </strong>
+
+                                    <p>
+                                        Sayım farkı, hasar veya
+                                        benzeri durumları soldaki
+                                        formdan kaydedebilirsiniz.
+                                    </p>
+                                </div>
+                            </div>
+                        ) : filteredAdjustments.length === 0 ? (
+                            <div className="inventory-filter-empty">
+                                <strong>
+                                    Aramayla eşleşen düzeltme yok
+                                </strong>
+
+                                <span>
+                                    Ürün, SKU, neden, not veya
+                                    tarih ile arayabilirsiniz.
+                                </span>
+                            </div>
+                        ) : (
+                            <div className="adjustment-history-list">
+                                {filteredAdjustments.map(
+                                    (record) => (
+                                        <div
+                                            key={
+                                                record.adjustment.id
+                                            }
+                                            className="adjustment-history-item"
+                                        >
+                                            <div className="adjustment-history-main">
+                                                <div className="adjustment-history-title">
+                                                    <span
+                                                        className={`inventory-adjustment-badge ${record.adjustment.direction ===
+                                                            'increase'
+                                                            ? 'inventory-adjustment-increase'
+                                                            : 'inventory-adjustment-decrease'
+                                                            }`}
+                                                    >
+                                                        {getAdjustmentDirectionLabel(
+                                                            record.adjustment.direction,
+                                                        )}
+                                                    </span>
+
+                                                    <strong>
+                                                        {record.productName}
+                                                    </strong>
+
+                                                    {record.productSku && (
+                                                        <span className="adjustment-history-sku">
+                                                            {record.productSku}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <div className="adjustment-history-meta">
+                                                    <span>
+                                                        {formatDate(
+                                                            record.adjustment.adjustmentDate,
+                                                        )}
+                                                    </span>
+
+                                                    <span>
+                                                        {record.adjustment.reason}
+                                                    </span>
+
+                                                    {record.adjustment.note && (
+                                                        <span>
+                                                            {record.adjustment.note}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div className="adjustment-history-values">
+                                                <strong
+                                                    className={
+                                                        record.adjustment.direction ===
+                                                            'increase'
+                                                            ? 'adjustment-quantity-positive'
+                                                            : 'adjustment-quantity-negative'
+                                                    }
+                                                >
+                                                    {record.adjustment.direction ===
+                                                        'increase'
+                                                        ? '+'
+                                                        : '-'}
+                                                    {record.adjustment.quantity}
+                                                </strong>
+
+                                                <span>
+                                                    {record.adjustment.direction ===
+                                                        'increase'
+                                                        ? 'Eklenen değer'
+                                                        : 'FIFO maliyeti'}
+                                                </span>
+
+                                                <strong>
+                                                    {formatMoneyFromMinor(
+                                                        record.valueMinor,
+                                                    )}
+                                                </strong>
+                                            </div>
+                                        </div>
+                                    ),
+                                )}
+                            </div>
+                        )}
+                    </article>
+                </section>
+
+                <section className="dashboard-panel inventory-lots-panel">
                     <div className="panel-header inventory-history-header">
                         <div>
-                            <h2>Düzeltme Geçmişi</h2>
+                            <h2>Stok Parti Geçmişi</h2>
 
                             <p>
-                                {filteredAdjustments.length} /{' '}
-                                {adjustments.length} düzeltme
-                                kaydı gösteriliyor.
+                                {filteredLots.length} /{' '}
+                                {lots.length} FIFO parti girişi
+                                gösteriliyor. Azalışlar yukarıdaki
+                                Düzeltme Geçmişi'nde tutulur.
                             </p>
                         </div>
 
@@ -1275,21 +1611,21 @@ function InventoryPage() {
 
                             <input
                                 type="search"
-                                value={adjustmentSearch}
+                                value={historySearch}
                                 onChange={(event) =>
-                                    setAdjustmentSearch(
+                                    setHistorySearch(
                                         event.target.value,
                                     )
                                 }
-                                placeholder="Düzeltmelerde ara..."
+                                placeholder="Geçmişte ara..."
                             />
                         </label>
                     </div>
 
-                    {adjustments.length === 0 ? (
-                        <div className="empty-state empty-state-compact">
+                    {lots.length === 0 ? (
+                        <div className="empty-state">
                             <div className="empty-state-icon">
-                                <History
+                                <PackagePlus
                                     size={30}
                                     strokeWidth={1.5}
                                 />
@@ -1297,269 +1633,118 @@ function InventoryPage() {
 
                             <div>
                                 <strong>
-                                    Henüz stok düzeltmesi yok
+                                    Henüz stok kaydı yok
                                 </strong>
 
                                 <p>
-                                    Sayım farkı, hasar veya
-                                    benzeri durumları soldaki
-                                    formdan kaydedebilirsiniz.
+                                    Normal stok alımı veya
+                                    açılış stoku
+                                    oluşturabilirsiniz.
                                 </p>
                             </div>
                         </div>
-                    ) : filteredAdjustments.length === 0 ? (
+                    ) : filteredLots.length === 0 ? (
                         <div className="inventory-filter-empty">
                             <strong>
-                                Aramayla eşleşen düzeltme yok
+                                Aramayla eşleşen stok kaydı yok
                             </strong>
 
                             <span>
-                                Ürün, SKU, neden, not veya
-                                tarih ile arayabilirsiniz.
+                                Ürün adı, SKU, not veya tarih
+                                ile arayabilirsiniz.
                             </span>
                         </div>
                     ) : (
-                        <div className="adjustment-history-list">
-                            {filteredAdjustments.map(
-                                (record) => (
-                                    <div
-                                        key={
-                                            record.adjustment.id
-                                        }
-                                        className="adjustment-history-item"
-                                    >
-                                        <div className="adjustment-history-main">
-                                            <div className="adjustment-history-title">
-                                                <span
-                                                    className={`inventory-adjustment-badge ${record.adjustment.direction ===
-                                                        'increase'
-                                                        ? 'inventory-adjustment-increase'
-                                                        : 'inventory-adjustment-decrease'
-                                                        }`}
-                                                >
-                                                    {getAdjustmentDirectionLabel(
-                                                        record.adjustment.direction,
-                                                    )}
-                                                </span>
+                        <div className="product-table-wrapper">
+                            <table className="product-table inventory-table">
+                                <thead>
+                                    <tr>
+                                        <th>Tür</th>
+                                        <th>Tarih</th>
+                                        <th>Ürün</th>
+                                        <th>Giren</th>
+                                        <th>Kalan</th>
+                                        <th>Birim Maliyet</th>
+                                        <th>Kalan Değer</th>
+                                        <th>Not</th>
+                                    </tr>
+                                </thead>
 
-                                                <strong>
-                                                    {record.productName}
-                                                </strong>
+                                <tbody>
+                                    {filteredLots.map((lot) => {
+                                        const product =
+                                            productMap.get(
+                                                lot.productId,
+                                            )
 
-                                                {record.productSku && (
-                                                    <span className="adjustment-history-sku">
-                                                        {record.productSku}
+                                        return (
+                                            <tr key={lot.id}>
+                                                <td>
+                                                    <span
+                                                        className={`inventory-type-badge ${getEntryTypeBadgeClass(
+                                                            lot.entryType,
+                                                        )}`}
+                                                    >
+                                                        {getEntryTypeLabel(
+                                                            lot.entryType,
+                                                        )}
                                                     </span>
-                                                )}
-                                            </div>
+                                                </td>
 
-                                            <div className="adjustment-history-meta">
-                                                <span>
+                                                <td>
                                                     {formatDate(
-                                                        record.adjustment.adjustmentDate,
+                                                        lot.purchaseDate,
                                                     )}
-                                                </span>
+                                                </td>
 
-                                                <span>
-                                                    {record.adjustment.reason}
-                                                </span>
+                                                <td>
+                                                    <div className="inventory-history-product">
+                                                        <strong>
+                                                            {product?.name ??
+                                                                'Bilinmeyen ürün'}
+                                                        </strong>
 
-                                                {record.adjustment.note && (
-                                                    <span>
-                                                        {record.adjustment.note}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
+                                                        {product?.sku && (
+                                                            <span>
+                                                                {product.sku}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
 
-                                        <div className="adjustment-history-values">
-                                            <strong
-                                                className={
-                                                    record.adjustment.direction ===
-                                                        'increase'
-                                                        ? 'adjustment-quantity-positive'
-                                                        : 'adjustment-quantity-negative'
-                                                }
-                                            >
-                                                {record.adjustment.direction ===
-                                                    'increase'
-                                                    ? '+'
-                                                    : '-'}
-                                                {record.adjustment.quantity}
-                                            </strong>
+                                                <td>
+                                                    {lot.quantityReceived}
+                                                </td>
 
-                                            <span>
-                                                {record.adjustment.direction ===
-                                                    'increase'
-                                                    ? 'Eklenen değer'
-                                                    : 'FIFO maliyeti'}
-                                            </span>
+                                                <td>
+                                                    {lot.quantityRemaining}
+                                                </td>
 
-                                            <strong>
-                                                {formatMoneyFromMinor(
-                                                    record.valueMinor,
-                                                )}
-                                            </strong>
-                                        </div>
-                                    </div>
-                                ),
-                            )}
+                                                <td>
+                                                    {formatMoneyFromMinor(
+                                                        lot.unitCostMinor,
+                                                    )}
+                                                </td>
+
+                                                <td>
+                                                    {formatMoneyFromMinor(
+                                                        lot.quantityRemaining *
+                                                        lot.unitCostMinor,
+                                                    )}
+                                                </td>
+
+                                                <td>
+                                                    {lot.note ?? '—'}
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
                         </div>
                     )}
-                </article>
-            </section>
-
-            <section className="dashboard-panel inventory-lots-panel">
-                <div className="panel-header inventory-history-header">
-                    <div>
-                        <h2>Stok Parti Geçmişi</h2>
-
-                        <p>
-                            {filteredLots.length} /{' '}
-                            {lots.length} FIFO parti girişi
-                            gösteriliyor. Azalışlar yukarıdaki
-                            Düzeltme Geçmişi'nde tutulur.
-                        </p>
-                    </div>
-
-                    <label className="inventory-search-field inventory-history-search">
-                        <Search size={16} />
-
-                        <input
-                            type="search"
-                            value={historySearch}
-                            onChange={(event) =>
-                                setHistorySearch(
-                                    event.target.value,
-                                )
-                            }
-                            placeholder="Geçmişte ara..."
-                        />
-                    </label>
-                </div>
-
-                {lots.length === 0 ? (
-                    <div className="empty-state">
-                        <div className="empty-state-icon">
-                            <PackagePlus
-                                size={30}
-                                strokeWidth={1.5}
-                            />
-                        </div>
-
-                        <div>
-                            <strong>
-                                Henüz stok kaydı yok
-                            </strong>
-
-                            <p>
-                                Normal stok alımı veya
-                                açılış stoku
-                                oluşturabilirsiniz.
-                            </p>
-                        </div>
-                    </div>
-                ) : filteredLots.length === 0 ? (
-                    <div className="inventory-filter-empty">
-                        <strong>
-                            Aramayla eşleşen stok kaydı yok
-                        </strong>
-
-                        <span>
-                            Ürün adı, SKU, not veya tarih
-                            ile arayabilirsiniz.
-                        </span>
-                    </div>
-                ) : (
-                    <div className="product-table-wrapper">
-                        <table className="product-table inventory-table">
-                            <thead>
-                                <tr>
-                                    <th>Tür</th>
-                                    <th>Tarih</th>
-                                    <th>Ürün</th>
-                                    <th>Giren</th>
-                                    <th>Kalan</th>
-                                    <th>Birim Maliyet</th>
-                                    <th>Kalan Değer</th>
-                                    <th>Not</th>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-                                {filteredLots.map((lot) => {
-                                    const product =
-                                        productMap.get(
-                                            lot.productId,
-                                        )
-
-                                    return (
-                                        <tr key={lot.id}>
-                                            <td>
-                                                <span
-                                                    className={`inventory-type-badge ${getEntryTypeBadgeClass(
-                                                        lot.entryType,
-                                                    )}`}
-                                                >
-                                                    {getEntryTypeLabel(
-                                                        lot.entryType,
-                                                    )}
-                                                </span>
-                                            </td>
-
-                                            <td>
-                                                {formatDate(
-                                                    lot.purchaseDate,
-                                                )}
-                                            </td>
-
-                                            <td>
-                                                <div className="inventory-history-product">
-                                                    <strong>
-                                                        {product?.name ??
-                                                            'Bilinmeyen ürün'}
-                                                    </strong>
-
-                                                    {product?.sku && (
-                                                        <span>
-                                                            {product.sku}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </td>
-
-                                            <td>
-                                                {lot.quantityReceived}
-                                            </td>
-
-                                            <td>
-                                                {lot.quantityRemaining}
-                                            </td>
-
-                                            <td>
-                                                {formatMoneyFromMinor(
-                                                    lot.unitCostMinor,
-                                                )}
-                                            </td>
-
-                                            <td>
-                                                {formatMoneyFromMinor(
-                                                    lot.quantityRemaining *
-                                                    lot.unitCostMinor,
-                                                )}
-                                            </td>
-
-                                            <td>
-                                                {lot.note ?? '—'}
-                                            </td>
-                                        </tr>
-                                    )
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </section>
+                </section>
+            </div>
         </div>
     )
 }
