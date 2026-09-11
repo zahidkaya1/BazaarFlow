@@ -2,8 +2,10 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Boxes, Pencil, Plus, Power, X } from 'lucide-react'
 import { categoryService } from '../services/categoryService'
+import { inventoryService } from '../services/inventoryService'
 import { productService } from '../services/productService'
 import type { Category } from '../types/category'
+import type { InventoryLot } from '../types/inventoryLot'
 import type { Product } from '../types/product'
 import {
     formatMoneyFromMinor,
@@ -13,25 +15,29 @@ import {
 function ProductsPage() {
     const data = useLiveQuery(
         async () => {
-            const [categories, products] = await Promise.all([
+            const [categories, products, lots] = await Promise.all([
                 categoryService.getAll(),
                 productService.getAll(),
+                inventoryService.getAll(),
             ])
 
             return {
                 categories,
                 products,
+                lots,
             }
         },
         [],
         {
             categories: [] as Category[],
             products: [] as Product[],
+            lots: [] as InventoryLot[],
         },
     )
 
     const categories = data.categories
     const products = data.products
+    const lots = data.lots
 
     const [categoryName, setCategoryName] = useState('')
     const [editingCategoryId, setEditingCategoryId] = useState<string | null>(
@@ -46,6 +52,8 @@ function ProductsPage() {
     const [editingProductId, setEditingProductId] = useState<string | null>(
         null,
     )
+    const [isMobileProductFormOpen, setIsMobileProductFormOpen] =
+        useState(false)
 
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
@@ -57,6 +65,20 @@ function ProductsPage() {
             ),
         [categories],
     )
+
+    const stockByProduct = useMemo(() => {
+        const stock = new Map<string, number>()
+
+        for (const lot of lots) {
+            stock.set(
+                lot.productId,
+                (stock.get(lot.productId) ?? 0) +
+                lot.quantityRemaining,
+            )
+        }
+
+        return stock
+    }, [lots])
 
     const editingProduct = editingProductId
         ? products.find((product) => product.id === editingProductId)
@@ -85,6 +107,13 @@ function ProductsPage() {
         setProductPrice('')
         setMinimumStock('0')
         setEditingProductId(null)
+        setIsMobileProductFormOpen(false)
+    }
+
+    function openMobileNewProductForm() {
+        clearFeedback()
+        resetProductForm()
+        setIsMobileProductFormOpen(true)
     }
 
     async function handleCategorySubmit(
@@ -184,6 +213,7 @@ function ProductsPage() {
                 .replace('.', ','),
         )
         setMinimumStock(String(product.minimumStock))
+        setIsMobileProductFormOpen(true)
     }
 
     async function toggleCategory(category: Category) {
@@ -233,7 +263,7 @@ function ProductsPage() {
     }
 
     return (
-        <div className="dashboard">
+        <div className="dashboard products-page">
             <header className="page-header">
                 <span className="page-eyebrow">BazaarFlow</span>
                 <h1>Ürünler</h1>
@@ -254,6 +284,280 @@ function ProductsPage() {
                     {error || message}
                 </div>
             )}
+
+            <section className="mobile-products-view">
+                <div className="mobile-products-toolbar">
+                    <div>
+                        <strong>{products.length} ürün</strong>
+                        <span>
+                            Fiyat ve stok bilgilerini hızlıca yönetin.
+                        </span>
+                    </div>
+
+                    <button
+                        type="button"
+                        className="mobile-product-add-button"
+                        onClick={openMobileNewProductForm}
+                    >
+                        <Plus size={18} />
+                        Yeni Ürün
+                    </button>
+                </div>
+
+                {isMobileProductFormOpen && (
+                    <article className="mobile-product-form-card">
+                        <div className="mobile-product-form-header">
+                            <div>
+                                <span>
+                                    {editingProductId
+                                        ? 'Ürün düzenleme'
+                                        : 'Yeni ürün'}
+                                </span>
+
+                                <h2>
+                                    {editingProductId
+                                        ? editingProduct?.name ?? 'Ürünü Düzenle'
+                                        : 'Ürün Ekle'}
+                                </h2>
+                            </div>
+
+                            <button
+                                type="button"
+                                aria-label="Formu kapat"
+                                onClick={resetProductForm}
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <form
+                            className="mobile-product-form"
+                            onSubmit={handleProductSubmit}
+                        >
+                            <label className="mobile-product-field">
+                                <span>Ürün adı</span>
+
+                                <input
+                                    type="text"
+                                    value={productName}
+                                    onChange={(event) =>
+                                        setProductName(event.target.value)
+                                    }
+                                    placeholder="Örn. Sade Şal"
+                                    required
+                                />
+                            </label>
+
+                            <label className="mobile-product-field">
+                                <span>Satış fiyatı</span>
+
+                                <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={productPrice}
+                                    onChange={(event) =>
+                                        setProductPrice(event.target.value)
+                                    }
+                                    placeholder="Örn. 60,00"
+                                    required
+                                />
+                            </label>
+
+                            <details className="mobile-product-details">
+                                <summary>Diğer bilgiler</summary>
+
+                                <div className="mobile-product-details-content">
+                                    <label className="mobile-product-field">
+                                        <span>SKU / Ürün kodu</span>
+
+                                        <input
+                                            type="text"
+                                            value={productSku}
+                                            onChange={(event) =>
+                                                setProductSku(
+                                                    event.target.value,
+                                                )
+                                            }
+                                            placeholder="İsteğe bağlı"
+                                        />
+                                    </label>
+
+                                    <label className="mobile-product-field">
+                                        <span>Kategori</span>
+
+                                        <select
+                                            value={productCategoryId}
+                                            onChange={(event) =>
+                                                setProductCategoryId(
+                                                    event.target.value,
+                                                )
+                                            }
+                                        >
+                                            <option value="">
+                                                Kategorisiz
+                                            </option>
+
+                                            {selectableCategories.map(
+                                                (category) => (
+                                                    <option
+                                                        key={category.id}
+                                                        value={category.id}
+                                                    >
+                                                        {category.name}
+                                                        {!category.isActive
+                                                            ? ' (Pasif)'
+                                                            : ''}
+                                                    </option>
+                                                ),
+                                            )}
+                                        </select>
+                                    </label>
+
+                                    <label className="mobile-product-field">
+                                        <span>Minimum stok</span>
+
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="1"
+                                            inputMode="numeric"
+                                            value={minimumStock}
+                                            onChange={(event) =>
+                                                setMinimumStock(
+                                                    event.target.value,
+                                                )
+                                            }
+                                            required
+                                        />
+                                    </label>
+                                </div>
+                            </details>
+
+                            <button
+                                type="submit"
+                                className="mobile-product-save-button"
+                            >
+                                {editingProductId ? (
+                                    <Pencil size={18} />
+                                ) : (
+                                    <Plus size={18} />
+                                )}
+
+                                {editingProductId
+                                    ? 'DEĞİŞİKLİKLERİ KAYDET'
+                                    : 'ÜRÜNÜ EKLE'}
+                            </button>
+                        </form>
+                    </article>
+                )}
+
+                {products.length === 0 ? (
+                    <div className="mobile-products-empty">
+                        <Boxes size={30} strokeWidth={1.5} />
+                        <strong>Henüz ürün yok</strong>
+                        <span>
+                            İlk ürününüzü Yeni Ürün butonuyla ekleyin.
+                        </span>
+                    </div>
+                ) : (
+                    <div className="mobile-product-list">
+                        {products.map((product) => {
+                            const currentStock =
+                                stockByProduct.get(product.id) ?? 0
+
+                            return (
+                                <article
+                                    key={product.id}
+                                    className={`mobile-product-card ${product.isActive
+                                        ? ''
+                                        : 'mobile-product-card-passive'
+                                        }`}
+                                >
+                                    <div className="mobile-product-card-top">
+                                        <div className="mobile-product-title">
+                                            <div>
+                                                <strong>
+                                                    {product.name}
+                                                </strong>
+
+                                                {product.sku && (
+                                                    <span>
+                                                        {product.sku}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <span
+                                                className={`status-badge ${product.isActive
+                                                    ? 'status-badge-active'
+                                                    : 'status-badge-passive'
+                                                    }`}
+                                            >
+                                                {product.isActive
+                                                    ? 'Aktif'
+                                                    : 'Pasif'}
+                                            </span>
+                                        </div>
+
+                                        <strong className="mobile-product-price">
+                                            {formatMoneyFromMinor(
+                                                product.defaultSalePriceMinor,
+                                            )}
+                                        </strong>
+                                    </div>
+
+                                    <div className="mobile-product-card-meta">
+                                        <div>
+                                            <span>Stok</span>
+                                            <strong>
+                                                {currentStock} adet
+                                            </strong>
+                                        </div>
+
+                                        <div>
+                                            <span>Kategori</span>
+                                            <strong>
+                                                {product.categoryId
+                                                    ? categoryMap.get(
+                                                        product.categoryId,
+                                                    ) ??
+                                                    'Bilinmeyen'
+                                                    : 'Kategorisiz'}
+                                            </strong>
+                                        </div>
+                                    </div>
+
+                                    <div className="mobile-product-card-actions">
+                                        <button
+                                            type="button"
+                                            className="mobile-product-edit-button"
+                                            onClick={() =>
+                                                startProductEdit(product)
+                                            }
+                                        >
+                                            <Pencil size={16} />
+                                            Düzenle
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            className="mobile-product-power-button"
+                                            onClick={() =>
+                                                void toggleProduct(product)
+                                            }
+                                        >
+                                            <Power size={16} />
+                                            {product.isActive
+                                                ? 'Pasife Al'
+                                                : 'Aktifleştir'}
+                                        </button>
+                                    </div>
+                                </article>
+                            )
+                        })}
+                    </div>
+                )}
+            </section>
 
             <section className="product-management-grid">
                 <article className="dashboard-panel">
