@@ -2,9 +2,10 @@ import {
     Boxes,
     ChartNoAxesCombined,
     LayoutDashboard,
+    ListPlus,
     PackagePlus,
+    ReceiptText,
     Settings,
-    ShoppingCart,
     Zap,
 } from 'lucide-react'
 
@@ -22,9 +23,14 @@ const navigationItems = [
         icon: Zap,
     },
     {
-        label: 'Satış',
-        path: '/sales',
-        icon: ShoppingCart,
+        label: 'Toplu Satış',
+        path: '/bulk-sale',
+        icon: ListPlus,
+    },
+    {
+        label: 'Satış Geçmişi',
+        path: '/sales-history',
+        icon: ReceiptText,
     },
     {
         label: 'Stok',

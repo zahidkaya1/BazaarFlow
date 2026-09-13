@@ -330,7 +330,7 @@ function DashboardPage() {
 
                         <Link
                             className="dashboard-panel-link"
-                            to="/sales"
+                            to="/sales-history"
                         >
                             Tüm satışlar
                         </Link>

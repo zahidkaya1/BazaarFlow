@@ -19,6 +19,7 @@ import {
 import type { InventoryLot } from '../types/inventoryLot'
 import type { Product } from '../types/product'
 import { formatMoneyFromMinor } from '../utils/money'
+import { getSaleRoundingTargets } from '../utils/saleRounding'
 
 type QuickSaleCartEntry = {
     quantity: number
@@ -34,93 +35,6 @@ function getTodayDateValue(): string {
     const day = String(now.getDate()).padStart(2, '0')
 
     return `${year}-${month}-${day}`
-}
-
-function getRoundingTargets(
-    totalMinor: number,
-): number[] {
-    if (totalMinor <= 0) {
-        return []
-    }
-
-    /*
-     * Pazarcı kullanımında 39 TL gibi teknik olarak yakın ama
-     * pratikte yuvarlak olmayan tutarları göstermiyoruz.
-     *
-     * 40 TL     -> 35 / 30 / 20
-     * 167,50 TL -> 165 / 160 / 150
-     * 180 TL    -> 175 / 170 / 160
-     *
-     * İlk seçenek en yakın alt 5 TL katı, sonraki seçenekler
-     * ise alt 10 TL katlarıdır.
-     */
-    if (totalMinor >= 1000) {
-        const nearestFiveMinor =
-            Math.floor(
-                (totalMinor - 1) /
-                500,
-            ) * 500
-
-        const nearestTenMinor =
-            Math.floor(
-                (totalMinor - 1) /
-                1000,
-            ) * 1000
-
-        const targets = new Set<number>()
-
-        if (
-            nearestFiveMinor > 0 &&
-            nearestFiveMinor < totalMinor
-        ) {
-            targets.add(nearestFiveMinor)
-        }
-
-        if (
-            nearestTenMinor > 0 &&
-            nearestTenMinor < totalMinor
-        ) {
-            targets.add(nearestTenMinor)
-        }
-
-        let nextTenMinor =
-            nearestTenMinor - 1000
-
-        while (
-            targets.size < 3 &&
-            nextTenMinor > 0
-        ) {
-            targets.add(nextTenMinor)
-            nextTenMinor -= 1000
-        }
-
-        return Array.from(targets)
-            .sort(
-                (first, second) =>
-                    second - first,
-            )
-            .slice(0, 3)
-    }
-
-    /*
-     * 10 TL altındaki küçük tutarlarda tam TL üzerinden
-     * sade öneriler üretmek daha doğal.
-     */
-    const nearestLiraMinor =
-        Math.floor(
-            (totalMinor - 1) /
-            100,
-        ) * 100
-
-    return [
-        nearestLiraMinor,
-        nearestLiraMinor - 100,
-        nearestLiraMinor - 200,
-    ].filter(
-        (target) =>
-            target > 0 &&
-            target < totalMinor,
-    )
 }
 
 function QuickSalePage() {
@@ -289,7 +203,7 @@ function QuickSalePage() {
     const roundingTargets =
         useMemo(
             () =>
-                getRoundingTargets(
+                getSaleRoundingTargets(
                     listTotalMinor,
                 ),
             [listTotalMinor],
@@ -615,8 +529,8 @@ function QuickSalePage() {
             {(message || error) && (
                 <div
                     className={`form-message ${error
-                            ? 'form-message-error'
-                            : 'form-message-success'
+                        ? 'form-message-error'
+                        : 'form-message-success'
                         }`}
                     role="status"
                 >
@@ -677,8 +591,8 @@ function QuickSalePage() {
                                             }
                                             type="button"
                                             className={`quick-sale-product-button ${unavailable
-                                                    ? 'quick-sale-product-button-disabled'
-                                                    : ''
+                                                ? 'quick-sale-product-button-disabled'
+                                                : ''
                                                 }`}
                                             disabled={
                                                 unavailable ||
@@ -722,9 +636,9 @@ function QuickSalePage() {
 
                                             <span
                                                 className={`quick-sale-product-stock ${stock <=
-                                                        0
-                                                        ? 'quick-sale-product-stock-empty'
-                                                        : ''
+                                                    0
+                                                    ? 'quick-sale-product-stock-empty'
+                                                    : ''
                                                     }`}
                                             >
                                                 {stock >

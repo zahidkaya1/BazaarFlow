@@ -1,11 +1,12 @@
 import { lazy, Suspense } from 'react'
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import MobileBottomNav from './components/layout/MobileBottomNav'
 import Sidebar from './components/layout/Sidebar'
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const QuickSalePage = lazy(() => import('./pages/QuickSalePage'))
-const SalesPage = lazy(() => import('./pages/SalesPage'))
+const BulkSalePage = lazy(() => import('./pages/BulkSalePage'))
+const SalesHistoryPage = lazy(() => import('./pages/SalesHistoryPage'))
 const InventoryPage = lazy(() => import('./pages/InventoryPage'))
 const ProductsPage = lazy(() => import('./pages/ProductsPage'))
 const ReportsPage = lazy(() => import('./pages/ReportsPage'))
@@ -32,7 +33,9 @@ function App() {
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/quick-sale" element={<QuickSalePage />} />
-            <Route path="/sales" element={<SalesPage />} />
+            <Route path="/bulk-sale" element={<BulkSalePage />} />
+            <Route path="/sales-history" element={<SalesHistoryPage />} />
+            <Route path="/sales" element={<Navigate replace to="/sales-history" />} />
             <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/reports" element={<ReportsPage />} />

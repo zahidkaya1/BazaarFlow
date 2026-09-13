@@ -6,7 +6,6 @@ import {
     LayoutDashboard,
     ReceiptText,
     Settings,
-    ShoppingCart,
     TrendingUp,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -147,13 +146,13 @@ function MobileMorePage() {
                 </div>
 
                 <div className="mobile-more-grid">
-                    <Link to="/sales" className="mobile-more-item">
+                    <Link to="/sales-history" className="mobile-more-item">
                         <span className="mobile-more-item-icon">
-                            <ShoppingCart size={21} />
+                            <ReceiptText size={21} />
                         </span>
 
                         <div>
-                            <strong>Detaylı Satışlar</strong>
+                            <strong>Satış Geçmişi</strong>
                             <span>
                                 Geçmiş satışları görüntüleyin,
                                 düzenleyin veya iptal edin.
