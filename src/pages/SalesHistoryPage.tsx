@@ -3,6 +3,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import {
     Ban,
     CalendarDays,
+    ChevronDown,
+    ChevronUp,
     Pencil,
     Save,
     Search,
@@ -105,6 +107,48 @@ function formatDate(value: string): string {
     return `${day}.${month}.${year}`
 }
 
+
+function getTodayDateValue(): string {
+    const now = new Date()
+
+    const year = now.getFullYear()
+    const month = String(
+        now.getMonth() + 1,
+    ).padStart(2, '0')
+    const day = String(
+        now.getDate(),
+    ).padStart(2, '0')
+
+    return `${year}-${month}-${day}`
+}
+
+function getWeekStartDateValue(): string {
+    const now = new Date()
+
+    const dayOfWeek = now.getDay()
+    const mondayOffset =
+        dayOfWeek === 0
+            ? -6
+            : 1 - dayOfWeek
+
+    const monday = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() + mondayOffset,
+    )
+
+    const year =
+        monday.getFullYear()
+    const month = String(
+        monday.getMonth() + 1,
+    ).padStart(2, '0')
+    const day = String(
+        monday.getDate(),
+    ).padStart(2, '0')
+
+    return `${year}-${month}-${day}`
+}
+
 function clearBasketDiscounts(
     items: DraftSaleItem[],
 ): DraftSaleItem[] {
@@ -167,6 +211,11 @@ function SalesHistoryPage() {
 
     const [error, setError] =
         useState('')
+
+    const [
+        expandedMobileSaleId,
+        setExpandedMobileSaleId,
+    ] = useState<string | null>(null)
 
     const productMap = useMemo(
         () =>
@@ -332,6 +381,32 @@ function SalesHistoryPage() {
         historySearch.trim() !== '' ||
         historyStatus !== 'all'
 
+    const todayDateValue =
+        getTodayDateValue()
+
+    const weekStartDateValue =
+        getWeekStartDateValue()
+
+    const mobileHistoryPeriod:
+        | 'today'
+        | 'week'
+        | 'all'
+        | 'custom' =
+        historyStartDate ===
+            todayDateValue &&
+            historyEndDate ===
+            todayDateValue
+            ? 'today'
+            : historyStartDate ===
+                weekStartDateValue &&
+                historyEndDate ===
+                todayDateValue
+                ? 'week'
+                : historyStartDate === '' &&
+                    historyEndDate === ''
+                    ? 'all'
+                    : 'custom'
+
     function clearFeedback() {
         setMessage('')
         setError('')
@@ -342,6 +417,46 @@ function SalesHistoryPage() {
         setHistoryEndDate('')
         setHistorySearch('')
         setHistoryStatus('all')
+    }
+
+    function setMobileHistoryPeriod(
+        period: 'today' | 'week' | 'all',
+    ) {
+        setHistoryStatus('all')
+
+        if (period === 'today') {
+            setHistoryStartDate(
+                todayDateValue,
+            )
+            setHistoryEndDate(
+                todayDateValue,
+            )
+            return
+        }
+
+        if (period === 'week') {
+            setHistoryStartDate(
+                weekStartDateValue,
+            )
+            setHistoryEndDate(
+                todayDateValue,
+            )
+            return
+        }
+
+        setHistoryStartDate('')
+        setHistoryEndDate('')
+    }
+
+    function toggleMobileSale(
+        saleId: string,
+    ) {
+        setExpandedMobileSaleId(
+            (current) =>
+                current === saleId
+                    ? null
+                    : saleId,
+        )
     }
 
     function resetEditor() {
@@ -773,7 +888,7 @@ function SalesHistoryPage() {
             )}
 
             {editingSaleId && (
-                <section className="dashboard-panel">
+                <section className="dashboard-panel sales-history-desktop-only">
                     <div className="panel-header">
                         <div>
                             <span className="page-eyebrow">
@@ -1101,7 +1216,7 @@ function SalesHistoryPage() {
                 </section>
             )}
 
-            <section className="sales-history-section">
+            <section className="sales-history-section sales-history-desktop-only">
                 <div className="sales-history-header">
                     <div>
                         <span className="page-eyebrow">
@@ -1567,6 +1682,637 @@ function SalesHistoryPage() {
                                         )}
                                 </article>
                             ),
+                        )}
+                    </div>
+                )}
+            </section>
+
+            <section className="sales-history-mobile-only mobile-sales-history">
+                {editingSaleId && (
+                    <article className="mobile-sales-editor">
+                        <div className="mobile-sales-editor-header">
+                            <div>
+                                <span className="page-eyebrow">
+                                    Kayıt Düzenleme
+                                </span>
+
+                                <h2>Satışı Düzenle</h2>
+
+                                <p>
+                                    Kaydettiğinizde stok ve FIFO
+                                    maliyeti otomatik güncellenir.
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                className="mobile-sales-icon-button"
+                                onClick={stopEditingSale}
+                                aria-label="Düzenlemeyi kapat"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="mobile-sales-editor-meta">
+                            <label className="form-field">
+                                <span>Satış tarihi</span>
+
+                                <input
+                                    type="date"
+                                    value={saleDate}
+                                    onChange={(event) =>
+                                        setSaleDate(
+                                            event.target.value,
+                                        )
+                                    }
+                                />
+                            </label>
+
+                            <label className="form-field">
+                                <span>Satış notu</span>
+
+                                <input
+                                    type="text"
+                                    value={saleNote}
+                                    onChange={(event) =>
+                                        setSaleNote(
+                                            event.target.value,
+                                        )
+                                    }
+                                    placeholder="İsteğe bağlı"
+                                />
+                            </label>
+                        </div>
+
+                        <div className="mobile-sales-edit-items">
+                            {draftItems.map(
+                                (item, index) => (
+                                    <div
+                                        key={`${item.productId}-${index}`}
+                                        className="mobile-sales-edit-item"
+                                    >
+                                        <label className="form-field">
+                                            <span>Ürün</span>
+
+                                            <select
+                                                value={item.productId}
+                                                onChange={(event) =>
+                                                    updateDraftItemProduct(
+                                                        index,
+                                                        event.target.value,
+                                                    )
+                                                }
+                                            >
+                                                {products
+                                                    .filter(
+                                                        (product) =>
+                                                            product.isActive ||
+                                                            product.id ===
+                                                            item.productId,
+                                                    )
+                                                    .map(
+                                                        (product) => (
+                                                            <option
+                                                                key={
+                                                                    product.id
+                                                                }
+                                                                value={
+                                                                    product.id
+                                                                }
+                                                            >
+                                                                {
+                                                                    product.name
+                                                                }
+                                                                {!product.isActive
+                                                                    ? ' (Pasif)'
+                                                                    : ''}
+                                                            </option>
+                                                        ),
+                                                    )}
+                                            </select>
+                                        </label>
+
+                                        <div className="mobile-sales-edit-row">
+                                            <label className="form-field">
+                                                <span>Adet</span>
+
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    step="1"
+                                                    value={item.quantity}
+                                                    onChange={(event) =>
+                                                        updateDraftItemQuantity(
+                                                            index,
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                />
+                                            </label>
+
+                                            <label className="form-field">
+                                                <span>Satış fiyatı</span>
+
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    value={
+                                                        item.actualUnitPriceMinor /
+                                                        100
+                                                    }
+                                                    onChange={(event) =>
+                                                        updateDraftItemPrice(
+                                                            index,
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                />
+                                            </label>
+                                        </div>
+
+                                        <label className="form-field">
+                                            <span>İndirim nedeni</span>
+
+                                            <input
+                                                type="text"
+                                                value={
+                                                    item.discountReason ??
+                                                    ''
+                                                }
+                                                onChange={(event) =>
+                                                    updateDraftItemDiscountReason(
+                                                        index,
+                                                        event.target.value,
+                                                    )
+                                                }
+                                                placeholder="İsteğe bağlı"
+                                            />
+                                        </label>
+
+                                        {(item.basketDiscountMinor ??
+                                            0) >
+                                            0 && (
+                                                <div className="mobile-sales-edit-discount">
+                                                    Sepet indirimi:{' '}
+                                                    <strong>
+                                                        -
+                                                        {formatMoneyFromMinor(
+                                                            item.basketDiscountMinor ??
+                                                            0,
+                                                        )}
+                                                    </strong>
+                                                </div>
+                                            )}
+
+                                        <button
+                                            type="button"
+                                            className="mobile-sales-remove-row"
+                                            onClick={() =>
+                                                removeDraftItem(
+                                                    item.productId,
+                                                )
+                                            }
+                                        >
+                                            <Trash2 size={15} />
+                                            Satırı Sil
+                                        </button>
+                                    </div>
+                                ),
+                            )}
+                        </div>
+
+                        <div className="mobile-sales-editor-summary">
+                            <span>
+                                <small>Ciro</small>
+                                <strong>
+                                    {formatMoneyFromMinor(
+                                        editingDraftRevenueMinor,
+                                    )}
+                                </strong>
+                            </span>
+
+                            <span>
+                                <small>İndirim</small>
+                                <strong>
+                                    {formatMoneyFromMinor(
+                                        editingDraftDiscountMinor,
+                                    )}
+                                </strong>
+                            </span>
+                        </div>
+
+                        <button
+                            type="button"
+                            className="primary-button mobile-sales-save-button"
+                            disabled={
+                                draftItems.length === 0
+                            }
+                            onClick={() =>
+                                void handleSaveEditedSale()
+                            }
+                        >
+                            <Save size={17} />
+                            Değişiklikleri Kaydet
+                        </button>
+                    </article>
+                )}
+
+                <div className="mobile-sales-toolbar">
+                    <div className="mobile-sales-periods">
+                        <button
+                            type="button"
+                            className={
+                                mobileHistoryPeriod ===
+                                    'today'
+                                    ? 'mobile-sales-period-active'
+                                    : ''
+                            }
+                            onClick={() =>
+                                setMobileHistoryPeriod(
+                                    'today',
+                                )
+                            }
+                        >
+                            Bugün
+                        </button>
+
+                        <button
+                            type="button"
+                            className={
+                                mobileHistoryPeriod ===
+                                    'week'
+                                    ? 'mobile-sales-period-active'
+                                    : ''
+                            }
+                            onClick={() =>
+                                setMobileHistoryPeriod(
+                                    'week',
+                                )
+                            }
+                        >
+                            Hafta
+                        </button>
+
+                        <button
+                            type="button"
+                            className={
+                                mobileHistoryPeriod ===
+                                    'all'
+                                    ? 'mobile-sales-period-active'
+                                    : ''
+                            }
+                            onClick={() =>
+                                setMobileHistoryPeriod(
+                                    'all',
+                                )
+                            }
+                        >
+                            Tümü
+                        </button>
+                    </div>
+
+                    <label className="mobile-sales-search">
+                        <Search size={16} />
+
+                        <input
+                            type="search"
+                            value={historySearch}
+                            onChange={(event) =>
+                                setHistorySearch(
+                                    event.target.value,
+                                )
+                            }
+                            placeholder="Ürün veya SKU ara"
+                        />
+                    </label>
+                </div>
+
+                <div className="mobile-sales-summary">
+                    <article>
+                        <span>Ciro</span>
+                        <strong>
+                            {formatMoneyFromMinor(
+                                historyRevenueMinor,
+                            )}
+                        </strong>
+                    </article>
+
+                    <article>
+                        <span>Brüt Kâr</span>
+                        <strong>
+                            {formatMoneyFromMinor(
+                                historyGrossProfitMinor,
+                            )}
+                        </strong>
+                    </article>
+
+                    <article>
+                        <span>Maliyet</span>
+                        <strong>
+                            {formatMoneyFromMinor(
+                                historyCostMinor,
+                            )}
+                        </strong>
+                    </article>
+
+                    <article>
+                        <span>Satılan</span>
+                        <strong>
+                            {historyTotalQuantity} adet
+                        </strong>
+                    </article>
+                </div>
+
+                {filteredSaleHistory.length ===
+                    0 ? (
+                    <div className="mobile-sales-empty">
+                        <ShoppingCart
+                            size={30}
+                            strokeWidth={1.5}
+                        />
+
+                        <strong>
+                            Satış bulunamadı
+                        </strong>
+
+                        <span>
+                            Dönemi veya arama filtresini değiştirin.
+                        </span>
+                    </div>
+                ) : (
+                    <div className="mobile-sales-list">
+                        {filteredSaleHistory.map(
+                            (record) => {
+                                const isExpanded =
+                                    expandedMobileSaleId ===
+                                    record.sale.id
+
+                                return (
+                                    <article
+                                        key={record.sale.id}
+                                        className={`mobile-sale-card ${record.sale.status ===
+                                            'cancelled'
+                                            ? 'mobile-sale-card-cancelled'
+                                            : ''
+                                            }`}
+                                    >
+                                        <button
+                                            type="button"
+                                            className="mobile-sale-card-toggle"
+                                            onClick={() =>
+                                                toggleMobileSale(
+                                                    record.sale.id,
+                                                )
+                                            }
+                                            aria-expanded={
+                                                isExpanded
+                                            }
+                                        >
+                                            <div className="mobile-sale-card-main">
+                                                <div className="mobile-sale-card-title">
+                                                    <strong>
+                                                        {formatDate(
+                                                            record.sale
+                                                                .saleDate,
+                                                        )}
+                                                    </strong>
+
+                                                    <span
+                                                        className={`sale-status-badge ${record.sale
+                                                            .status ===
+                                                            'completed'
+                                                            ? 'sale-status-completed'
+                                                            : 'sale-status-cancelled'
+                                                            }`}
+                                                    >
+                                                        {record.sale
+                                                            .status ===
+                                                            'completed'
+                                                            ? 'Tamamlandı'
+                                                            : 'İptal'}
+                                                    </span>
+                                                </div>
+
+                                                <span className="mobile-sale-card-meta">
+                                                    {
+                                                        record.totalQuantity
+                                                    }{' '}
+                                                    adet •{' '}
+                                                    {
+                                                        record.items
+                                                            .length
+                                                    }{' '}
+                                                    ürün
+                                                </span>
+                                            </div>
+
+                                            <div className="mobile-sale-card-money">
+                                                <strong>
+                                                    {formatMoneyFromMinor(
+                                                        record.revenueMinor,
+                                                    )}
+                                                </strong>
+
+                                                <span>
+                                                    Kâr{' '}
+                                                    {formatMoneyFromMinor(
+                                                        record.grossProfitMinor,
+                                                    )}
+                                                </span>
+                                            </div>
+
+                                            {isExpanded ? (
+                                                <ChevronUp
+                                                    size={18}
+                                                />
+                                            ) : (
+                                                <ChevronDown
+                                                    size={18}
+                                                />
+                                            )}
+                                        </button>
+
+                                        {!isExpanded && (
+                                            <div className="mobile-sale-card-preview">
+                                                {record.items
+                                                    .slice(0, 2)
+                                                    .map(
+                                                        (item) => (
+                                                            <span
+                                                                key={
+                                                                    item.id
+                                                                }
+                                                            >
+                                                                {
+                                                                    item.productName
+                                                                }{' '}
+                                                                ×
+                                                                {
+                                                                    item.quantity
+                                                                }
+                                                            </span>
+                                                        ),
+                                                    )}
+
+                                                {record.items
+                                                    .length >
+                                                    2 && (
+                                                        <span>
+                                                            +
+                                                            {record
+                                                                .items
+                                                                .length -
+                                                                2}{' '}
+                                                            ürün
+                                                        </span>
+                                                    )}
+                                            </div>
+                                        )}
+
+                                        {isExpanded && (
+                                            <div className="mobile-sale-card-detail">
+                                                <div className="mobile-sale-detail-metrics">
+                                                    <span>
+                                                        <small>
+                                                            Ciro
+                                                        </small>
+                                                        <strong>
+                                                            {formatMoneyFromMinor(
+                                                                record.revenueMinor,
+                                                            )}
+                                                        </strong>
+                                                    </span>
+
+                                                    <span>
+                                                        <small>
+                                                            Maliyet
+                                                        </small>
+                                                        <strong>
+                                                            {formatMoneyFromMinor(
+                                                                record.costMinor,
+                                                            )}
+                                                        </strong>
+                                                    </span>
+
+                                                    <span>
+                                                        <small>
+                                                            Kâr
+                                                        </small>
+                                                        <strong>
+                                                            {formatMoneyFromMinor(
+                                                                record.grossProfitMinor,
+                                                            )}
+                                                        </strong>
+                                                    </span>
+                                                </div>
+
+                                                <div className="mobile-sale-detail-items">
+                                                    {record.items.map(
+                                                        (item) => (
+                                                            <div
+                                                                key={
+                                                                    item.id
+                                                                }
+                                                            >
+                                                                <div>
+                                                                    <strong>
+                                                                        {
+                                                                            item.productName
+                                                                        }
+                                                                    </strong>
+
+                                                                    <span>
+                                                                        {
+                                                                            item.quantity
+                                                                        }{' '}
+                                                                        ×{' '}
+                                                                        {formatMoneyFromMinor(
+                                                                            item.actualUnitPriceMinor,
+                                                                        )}
+                                                                    </span>
+
+                                                                    {(item.basketDiscountMinor ??
+                                                                        0) >
+                                                                        0 && (
+                                                                            <small>
+                                                                                Sepet
+                                                                                indirimi
+                                                                                -
+                                                                                {formatMoneyFromMinor(
+                                                                                    item.basketDiscountMinor ??
+                                                                                    0,
+                                                                                )}
+                                                                            </small>
+                                                                        )}
+                                                                </div>
+
+                                                                <strong>
+                                                                    {formatMoneyFromMinor(
+                                                                        item.revenueMinor,
+                                                                    )}
+                                                                </strong>
+                                                            </div>
+                                                        ),
+                                                    )}
+                                                </div>
+
+                                                {record.sale.note && (
+                                                    <div className="mobile-sale-note">
+                                                        <strong>
+                                                            Not:
+                                                        </strong>{' '}
+                                                        {
+                                                            record.sale
+                                                                .note
+                                                        }
+                                                    </div>
+                                                )}
+
+                                                {record.sale.status ===
+                                                    'completed' && (
+                                                        <div className="mobile-sale-actions">
+                                                            <button
+                                                                type="button"
+                                                                className="action-button"
+                                                                onClick={() =>
+                                                                    startEditingSale(
+                                                                        record,
+                                                                    )
+                                                                }
+                                                            >
+                                                                <Pencil
+                                                                    size={
+                                                                        15
+                                                                    }
+                                                                />
+                                                                Düzenle
+                                                            </button>
+
+                                                            <button
+                                                                type="button"
+                                                                className="action-button action-button-danger"
+                                                                onClick={() =>
+                                                                    void handleCancelSale(
+                                                                        record,
+                                                                    )
+                                                                }
+                                                            >
+                                                                <Ban
+                                                                    size={
+                                                                        15
+                                                                    }
+                                                                />
+                                                                İptal Et
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                            </div>
+                                        )}
+                                    </article>
+                                )
+                            },
                         )}
                     </div>
                 )}
