@@ -4,11 +4,13 @@ import {
     ChevronRight,
     CircleDollarSign,
     LayoutDashboard,
+    PackageCheck,
     ReceiptText,
     Settings,
     TrendingUp,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+
 import {
     salesService,
     type SaleHistorySummary,
@@ -19,8 +21,12 @@ function getTodayDateValue(): string {
     const now = new Date()
 
     const year = now.getFullYear()
-    const month = String(now.getMonth() + 1).padStart(2, '0')
-    const day = String(now.getDate()).padStart(2, '0')
+    const month = String(
+        now.getMonth() + 1,
+    ).padStart(2, '0')
+    const day = String(
+        now.getDate(),
+    ).padStart(2, '0')
 
     return `${year}-${month}-${day}`
 }
@@ -46,45 +52,41 @@ function MobileMorePage() {
         } as SaleHistorySummary,
     )
 
-    const todayRevenueMinor =
-        todaySummary.revenueMinor
-
-    const todayGrossProfitMinor =
-        todaySummary.grossProfitMinor
-
-    const todayQuantity =
-        todaySummary.totalQuantity
-
     return (
-        <div className="dashboard mobile-more-page">
-            <header className="page-header mobile-more-header">
-                <span className="page-eyebrow">BazaarFlow</span>
+        <div className="mobile-more-compact-page">
+            <header className="mobile-more-compact-header">
+                <span className="page-eyebrow">
+                    BazaarFlow
+                </span>
+
                 <h1>Daha Fazla</h1>
-                <p>
-                    Günün özetini görün ve ayrıntılı yönetim
-                    ekranlarına ulaşın.
-                </p>
             </header>
 
-            <section className="mobile-more-today">
-                <div className="mobile-more-section-heading">
+            <section className="mobile-more-compact-today">
+                <div className="mobile-more-compact-section-heading">
                     <div>
                         <span>BUGÜN</span>
-                        <strong>Günlük Özet</strong>
+                        <strong>
+                            Günlük Özet
+                        </strong>
                     </div>
 
-                    <Link to="/" className="mobile-more-summary-link">
+                    <Link
+                        to="/"
+                        className="mobile-more-compact-inline-link"
+                    >
                         Genel Bakış
-                        <ChevronRight size={15} />
+                        <ChevronRight
+                            size={14}
+                        />
                     </Link>
                 </div>
 
-                <div className="mobile-more-summary-grid">
-                    <article className="mobile-more-summary-card">
-                        <span className="mobile-more-summary-icon">
+                <div className="mobile-more-compact-summary-grid">
+                    <article>
+                        <span className="mobile-more-compact-summary-icon">
                             <CircleDollarSign
-                                size={18}
-                                strokeWidth={1.9}
+                                size={16}
                             />
                         </span>
 
@@ -92,133 +94,173 @@ function MobileMorePage() {
                             <span>Ciro</span>
                             <strong>
                                 {formatMoneyFromMinor(
-                                    todayRevenueMinor,
+                                    todaySummary.revenueMinor,
                                 )}
                             </strong>
                         </div>
                     </article>
 
-                    <article className="mobile-more-summary-card">
-                        <span className="mobile-more-summary-icon">
+                    <article>
+                        <span className="mobile-more-compact-summary-icon">
+                            <TrendingUp
+                                size={16}
+                            />
+                        </span>
+
+                        <div>
+                            <span>
+                                Brüt Kâr
+                            </span>
+                            <strong>
+                                {formatMoneyFromMinor(
+                                    todaySummary.grossProfitMinor,
+                                )}
+                            </strong>
+                        </div>
+                    </article>
+
+                    <article>
+                        <span className="mobile-more-compact-summary-icon">
                             <ReceiptText
-                                size={18}
-                                strokeWidth={1.9}
+                                size={16}
                             />
                         </span>
 
                         <div>
                             <span>Satış</span>
                             <strong>
-                                {todaySummary.transactionCount}
+                                {
+                                    todaySummary.transactionCount
+                                }
                             </strong>
-                            <small>
-                                {todayQuantity} ürün
-                            </small>
                         </div>
                     </article>
 
-                    <article className="mobile-more-summary-card">
-                        <span className="mobile-more-summary-icon">
-                            <TrendingUp
-                                size={18}
-                                strokeWidth={1.9}
+                    <article>
+                        <span className="mobile-more-compact-summary-icon">
+                            <PackageCheck
+                                size={16}
                             />
                         </span>
 
                         <div>
-                            <span>Brüt Kâr</span>
+                            <span>
+                                Satılan
+                            </span>
                             <strong>
-                                {formatMoneyFromMinor(
-                                    todayGrossProfitMinor,
-                                )}
+                                {
+                                    todaySummary.totalQuantity
+                                }{' '}
+                                adet
                             </strong>
                         </div>
                     </article>
                 </div>
             </section>
 
-            <section className="mobile-more-tools">
-                <div className="mobile-more-section-heading">
-                    <div>
-                        <span>YÖNETİM</span>
-                        <strong>Diğer Ekranlar</strong>
-                    </div>
-                </div>
+            <section className="mobile-more-compact-menu">
+                <span className="mobile-more-compact-menu-title">
+                    DİĞER EKRANLAR
+                </span>
 
-                <div className="mobile-more-grid">
-                    <Link to="/sales-history" className="mobile-more-item">
-                        <span className="mobile-more-item-icon">
-                            <ReceiptText size={21} />
+                <div className="mobile-more-compact-menu-list">
+                    <Link
+                        to="/sales-history"
+                        className="mobile-more-compact-menu-item"
+                    >
+                        <span className="mobile-more-compact-menu-icon">
+                            <ReceiptText
+                                size={19}
+                            />
                         </span>
 
                         <div>
-                            <strong>Satış Geçmişi</strong>
+                            <strong>
+                                Satış Geçmişi
+                            </strong>
+
                             <span>
-                                Geçmiş satışları görüntüleyin,
-                                düzenleyin veya iptal edin.
+                                Geçmiş işlemler
                             </span>
                         </div>
 
                         <ChevronRight
-                            className="mobile-more-item-arrow"
-                            size={18}
+                            size={17}
                         />
                     </Link>
 
-                    <Link to="/reports" className="mobile-more-item">
-                        <span className="mobile-more-item-icon">
-                            <BarChart3 size={21} />
+                    <Link
+                        to="/reports"
+                        className="mobile-more-compact-menu-item"
+                    >
+                        <span className="mobile-more-compact-menu-icon">
+                            <BarChart3
+                                size={19}
+                            />
                         </span>
 
                         <div>
-                            <strong>Raporlar</strong>
+                            <strong>
+                                Raporlar
+                            </strong>
+
                             <span>
-                                Ciro, kârlılık ve ürün
-                                performansını inceleyin.
+                                Ciro ve kârlılık
                             </span>
                         </div>
 
                         <ChevronRight
-                            className="mobile-more-item-arrow"
-                            size={18}
+                            size={17}
                         />
                     </Link>
 
-                    <Link to="/" className="mobile-more-item">
-                        <span className="mobile-more-item-icon">
-                            <LayoutDashboard size={21} />
+                    <Link
+                        to="/"
+                        className="mobile-more-compact-menu-item"
+                    >
+                        <span className="mobile-more-compact-menu-icon">
+                            <LayoutDashboard
+                                size={19}
+                            />
                         </span>
 
                         <div>
-                            <strong>Genel Bakış</strong>
+                            <strong>
+                                Genel Bakış
+                            </strong>
+
                             <span>
-                                Dashboard ve ayrıntılı günlük
-                                durumu açın.
+                                Günlük durum
                             </span>
                         </div>
 
                         <ChevronRight
-                            className="mobile-more-item-arrow"
-                            size={18}
+                            size={17}
                         />
                     </Link>
 
-                    <Link to="/settings" className="mobile-more-item">
-                        <span className="mobile-more-item-icon">
-                            <Settings size={21} />
+                    <Link
+                        to="/settings"
+                        className="mobile-more-compact-menu-item"
+                    >
+                        <span className="mobile-more-compact-menu-icon">
+                            <Settings
+                                size={19}
+                            />
                         </span>
 
                         <div>
-                            <strong>Ayarlar ve Yedekleme</strong>
+                            <strong>
+                                Ayarlar
+                            </strong>
+
                             <span>
-                                Yedek oluşturun, geri yükleyin ve
-                                uygulama ayarlarını yönetin.
+                                Yedekleme ve dışa aktarma
                             </span>
                         </div>
 
                         <ChevronRight
-                            className="mobile-more-item-arrow"
-                            size={18}
+                            size={17}
                         />
                     </Link>
                 </div>
