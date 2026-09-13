@@ -15,12 +15,8 @@ import {
     salesService,
 } from '../services/salesService'
 import type { Product } from '../types/product'
-import {
-    formatMoneyFromMinor,
-} from '../utils/money'
-import {
-    getSaleRoundingTargets,
-} from '../utils/saleRounding'
+import { formatMoneyFromMinor } from '../utils/money'
+import { getSaleRoundingTargets } from '../utils/saleRounding'
 
 type BulkSaleItem = {
     productId: string
@@ -38,12 +34,33 @@ function getTodayDateValue(): string {
     return `${year}-${month}-${day}`
 }
 
+
+function formatDate(value: string): string {
+    const [year, month, day] =
+        value.split('-')
+
+    return `${day}.${month}.${year}`
+}
+
 function BulkSalePage() {
+    const [saleDate, setSaleDate] = useState(
+        getTodayDateValue(),
+    )
+
     const products = useLiveQuery(
         () => productService.getAll(),
         [],
         [] as Product[],
     )
+
+    const saleCapacityByProduct =
+        useLiveQuery(
+            () =>
+                fifoService.getSaleCapacityByDate(
+                    saleDate,
+                ),
+            [saleDate],
+        )
 
     const activeProducts = useMemo(
         () =>
@@ -51,10 +68,6 @@ function BulkSalePage() {
                 (product) => product.isActive,
             ),
         [products],
-    )
-
-    const [saleDate, setSaleDate] = useState(
-        getTodayDateValue(),
     )
 
     const [productId, setProductId] = useState('')
@@ -77,6 +90,43 @@ function BulkSalePage() {
             ),
         [activeProducts, productId],
     )
+
+    const selectedProductCapacity =
+        selectedProduct &&
+            saleCapacityByProduct
+            ? saleCapacityByProduct[
+            selectedProduct.id
+            ] ?? 0
+            : null
+
+    const selectedProductPlannedQuantity =
+        selectedProduct
+            ? items.find(
+                (item) =>
+                    item.productId ===
+                    selectedProduct.id,
+            )?.quantity ?? 0
+            : 0
+
+    const selectedProductRemainingCapacity =
+        selectedProductCapacity === null
+            ? null
+            : Math.max(
+                0,
+                selectedProductCapacity -
+                selectedProductPlannedQuantity,
+            )
+
+    const hasInvalidDateStock =
+        saleCapacityByProduct !==
+        undefined &&
+        items.some(
+            (item) =>
+                item.quantity >
+                (saleCapacityByProduct[
+                    item.productId
+                ] ?? 0),
+        )
 
     const totalQuantity = items.reduce(
         (total, item) => total + item.quantity,
@@ -142,6 +192,46 @@ function BulkSalePage() {
                 )
             }
 
+            if (
+                saleCapacityByProduct ===
+                undefined
+            ) {
+                throw new Error(
+                    'Seçilen tarih için stok durumu hesaplanıyor. Birkaç saniye sonra tekrar deneyin.',
+                )
+            }
+
+            const currentPlannedQuantity =
+                items.find(
+                    (item) =>
+                        item.productId ===
+                        selectedProduct.id,
+                )?.quantity ?? 0
+
+            const availableCapacity =
+                saleCapacityByProduct[
+                selectedProduct.id
+                ] ?? 0
+
+            if (
+                currentPlannedQuantity +
+                parsedQuantity >
+                availableCapacity
+            ) {
+                const remainingCapacity =
+                    Math.max(
+                        0,
+                        availableCapacity -
+                        currentPlannedQuantity,
+                    )
+
+                throw new Error(
+                    `${selectedProduct.name} için ${formatDate(
+                        saleDate,
+                    )} tarihinde en fazla ${remainingCapacity} adet daha eklenebilir.`,
+                )
+            }
+
             setItems((current) => {
                 const existing = current.find(
                     (item) =>
@@ -199,6 +289,32 @@ function BulkSalePage() {
             return
         }
 
+        const dateCapacity =
+            saleCapacityByProduct?.[
+            productIdToUpdate
+            ]
+
+        if (
+            dateCapacity !== undefined &&
+            parsedQuantity >
+            dateCapacity
+        ) {
+            const product =
+                products.find(
+                    (candidate) =>
+                        candidate.id ===
+                        productIdToUpdate,
+                )
+
+            setError(
+                `${product?.name ?? 'Ürün'} için ${formatDate(
+                    saleDate,
+                )} tarihinde en fazla ${dateCapacity} adet eklenebilir.`,
+            )
+
+            return
+        }
+
         setItems((current) =>
             current
                 .map((item) =>
@@ -239,6 +355,37 @@ function BulkSalePage() {
             if (items.length === 0) {
                 throw new Error(
                     'Kaydetmek için en az bir ürün ekleyin.',
+                )
+            }
+
+            if (
+                saleCapacityByProduct ===
+                undefined
+            ) {
+                throw new Error(
+                    'Seçilen tarih için stok durumu hesaplanıyor. Birkaç saniye sonra tekrar deneyin.',
+                )
+            }
+
+            const invalidItem =
+                items.find(
+                    (item) =>
+                        item.quantity >
+                        (saleCapacityByProduct[
+                            item.productId
+                        ] ?? 0),
+                )
+
+            if (invalidItem) {
+                const dateCapacity =
+                    saleCapacityByProduct[
+                    invalidItem.productId
+                    ] ?? 0
+
+                throw new Error(
+                    `${invalidItem.productName} için ${formatDate(
+                        saleDate,
+                    )} tarihinde en fazla ${dateCapacity} adet eklenebilir.`,
                 )
             }
 
@@ -427,6 +574,7 @@ function BulkSalePage() {
                                     value={saleDate}
                                     onChange={(event) => {
                                         setSaleDate(event.target.value)
+                                        resetRounding()
                                         clearFeedback()
                                     }}
                                     required
@@ -452,28 +600,76 @@ function BulkSalePage() {
                                         Ürün seçin
                                     </option>
 
-                                    {activeProducts.map((product) => (
-                                        <option
-                                            key={product.id}
-                                            value={product.id}
-                                        >
-                                            {product.name}
-                                            {product.sku
-                                                ? ` • ${product.sku}`
-                                                : ''}
-                                        </option>
-                                    ))}
+                                    {activeProducts.map((product) => {
+                                        const dateCapacity =
+                                            saleCapacityByProduct?.[
+                                            product.id
+                                            ]
+
+                                        const plannedQuantity =
+                                            items.find(
+                                                (item) =>
+                                                    item.productId ===
+                                                    product.id,
+                                            )?.quantity ?? 0
+
+                                        const remainingCapacity =
+                                            dateCapacity === undefined
+                                                ? null
+                                                : Math.max(
+                                                    0,
+                                                    dateCapacity -
+                                                    plannedQuantity,
+                                                )
+
+                                        return (
+                                            <option
+                                                key={product.id}
+                                                value={product.id}
+                                                disabled={
+                                                    remainingCapacity === 0
+                                                }
+                                            >
+                                                {product.name}
+                                                {product.sku
+                                                    ? ` • ${product.sku}`
+                                                    : ''}
+                                                {remainingCapacity === null
+                                                    ? ' • stok hesaplanıyor'
+                                                    : ` • ${remainingCapacity} adet eklenebilir`}
+                                            </option>
+                                        )
+                                    })}
                                 </select>
                             </label>
 
                             {selectedProduct && (
                                 <div className="sale-default-price">
-                                    Normal satış fiyatı:
-                                    <strong>
-                                        {formatMoneyFromMinor(
-                                            selectedProduct.defaultSalePriceMinor,
-                                        )}
-                                    </strong>
+                                    <span>
+                                        Normal satış fiyatı:{' '}
+                                        <strong>
+                                            {formatMoneyFromMinor(
+                                                selectedProduct.defaultSalePriceMinor,
+                                            )}
+                                        </strong>
+                                    </span>
+
+                                    <span>
+                                        {formatDate(saleDate)} tarihinde
+                                        eklenebilir stok:{' '}
+                                        <strong>
+                                            {selectedProductRemainingCapacity ===
+                                                null
+                                                ? 'Hesaplanıyor...'
+                                                : `${selectedProductRemainingCapacity} adet`}
+                                        </strong>
+                                    </span>
+
+                                    <small>
+                                        Sonraki tarihli mevcut satış ve stok
+                                        düzeltmelerini bozmadan eklenebilecek
+                                        miktar.
+                                    </small>
                                 </div>
                             )}
 
@@ -543,6 +739,7 @@ function BulkSalePage() {
                                     <tr>
                                         <th>Ürün</th>
                                         <th>Adet</th>
+                                        <th>Tarihte Stok</th>
                                         <th>Birim Fiyat</th>
                                         <th>Tutar</th>
                                         <th></th>
@@ -573,6 +770,32 @@ function BulkSalePage() {
                                                     }
                                                     aria-label={`${item.productName} satış adedi`}
                                                 />
+                                            </td>
+
+                                            <td>
+                                                {saleCapacityByProduct ===
+                                                    undefined ? (
+                                                    'Hesaplanıyor...'
+                                                ) : (
+                                                    <>
+                                                        <strong>
+                                                            {saleCapacityByProduct[
+                                                                item.productId
+                                                            ] ?? 0}{' '}
+                                                            adet
+                                                        </strong>
+
+                                                        {item.quantity >
+                                                            (saleCapacityByProduct[
+                                                                item.productId
+                                                            ] ?? 0) && (
+                                                                <span className="sale-item-reason">
+                                                                    Bu tarih için stok
+                                                                    yetersiz
+                                                                </span>
+                                                            )}
+                                                    </>
+                                                )}
                                             </td>
 
                                             <td>
@@ -645,7 +868,12 @@ function BulkSalePage() {
                                 <button
                                     type="button"
                                     className="primary-button"
-                                    disabled={isSaving}
+                                    disabled={
+                                        isSaving ||
+                                        saleCapacityByProduct ===
+                                        undefined ||
+                                        hasInvalidDateStock
+                                    }
                                     onClick={() =>
                                         void handleSaveSale()
                                     }

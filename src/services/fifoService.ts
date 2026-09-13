@@ -62,6 +62,13 @@ type FifoConsumptionEvent =
         adjustment: InventoryAdjustment
     }
 
+type FifoLotBucket = {
+    lots: InventoryLot[]
+    cursor: number
+}
+
+type FifoLotPool = Map<string, FifoLotBucket>
+
 function compareConsumptionEvents(
     first: FifoConsumptionEvent,
     second: FifoConsumptionEvent,
@@ -117,31 +124,79 @@ function buildConsumptionEvents(
             }),
         ),
 
-        ...adjustments
-            .filter(
-                (adjustment) =>
-                    adjustment.direction ===
-                    'decrease',
-            )
-            .map(
-                (
-                    adjustment,
-                ): FifoConsumptionEvent => ({
-                    kind: 'adjustment',
-                    date: adjustment.adjustmentDate,
-                    createdAt: adjustment.createdAt,
-                    id: adjustment.id,
-                    adjustment,
-                }),
-            ),
+        ...adjustments.map(
+            (
+                adjustment,
+            ): FifoConsumptionEvent => ({
+                kind: 'adjustment',
+                date: adjustment.adjustmentDate,
+                createdAt: adjustment.createdAt,
+                id: adjustment.id,
+                adjustment,
+            }),
+        ),
     ]
 
     return events.sort(compareConsumptionEvents)
 }
 
-function allocateFromLots(
-    lots: InventoryLot[],
+function buildSaleItemsBySale(
+    saleItems: SaleItem[],
+): Map<string, SaleItem[]> {
+    const itemsBySale =
+        new Map<string, SaleItem[]>()
 
+    for (const item of saleItems) {
+        const current =
+            itemsBySale.get(item.saleId) ?? []
+
+        current.push(item)
+        itemsBySale.set(item.saleId, current)
+    }
+
+    for (const items of itemsBySale.values()) {
+        items.sort(compareSaleItems)
+    }
+
+    return itemsBySale
+}
+
+/*
+ * Lotlar ürün bazında yalnızca bir kez gruplanıp FIFO sırasına
+ * sokulur. Tüketim olayları zaten kronolojik işlendiği için her
+ * satışta tekrar filter + sort yapmak yerine ürünün imleci ileri
+ * taşınır. Tükenen lotlara bir daha dönülmez.
+ */
+function buildFifoLotPool(
+    lots: InventoryLot[],
+): FifoLotPool {
+    const pool: FifoLotPool = new Map()
+
+    for (const lot of lots) {
+        const bucket = pool.get(lot.productId)
+
+        if (bucket) {
+            bucket.lots.push(lot)
+            continue
+        }
+
+        pool.set(lot.productId, {
+            lots: [lot],
+            cursor: 0,
+        })
+    }
+
+    for (const bucket of pool.values()) {
+        bucket.lots.sort(
+            compareInventoryLotsForFifo,
+        )
+    }
+
+    return pool
+}
+
+function allocateFromLotPool(
+    pool: FifoLotPool,
     productId: string,
     eventDate: string,
     quantity: number,
@@ -150,19 +205,34 @@ function allocateFromLots(
     let quantityToAllocate = quantity
 
     const slices: FifoAllocationSlice[] = []
+    const bucket = pool.get(productId)
 
-    const availableLots = lots
-        .filter(
-            (lot) =>
-                lot.productId === productId &&
-                lot.purchaseDate <= eventDate &&
-                lot.quantityRemaining > 0,
+    if (!bucket) {
+        throw new Error(
+            insufficientMessage(quantityToAllocate),
         )
-        .sort(compareInventoryLotsForFifo)
+    }
 
-    for (const lot of availableLots) {
-        if (quantityToAllocate <= 0) {
+    let index = bucket.cursor
+
+    while (
+        quantityToAllocate > 0 &&
+        index < bucket.lots.length
+    ) {
+        const lot = bucket.lots[index]
+
+        /*
+         * Lotlar purchaseDate sırasına göre dizili. Bu lot henüz
+         * satış tarihinde mevcut değilse sonraki lotlar da mevcut
+         * değildir; burada durmak yeterlidir.
+         */
+        if (lot.purchaseDate > eventDate) {
             break
+        }
+
+        if (lot.quantityRemaining <= 0) {
+            index += 1
+            continue
         }
 
         const allocatedQuantity = Math.min(
@@ -178,7 +248,13 @@ function allocateFromLots(
             quantity: allocatedQuantity,
             unitCostMinor: lot.unitCostMinor,
         })
+
+        if (lot.quantityRemaining <= 0) {
+            index += 1
+        }
     }
+
+    bucket.cursor = index
 
     if (quantityToAllocate > 0) {
         throw new Error(
@@ -189,27 +265,320 @@ function allocateFromLots(
     return slices
 }
 
+async function getSaleItemsForSales(
+    sales: Sale[],
+): Promise<SaleItem[]> {
+    if (sales.length === 0) {
+        return []
+    }
+
+    return db.saleItems
+        .where('saleId')
+        .anyOf(
+            sales.map((sale) => sale.id),
+        )
+        .toArray()
+}
+
+
+type SaleCapacityConsumptionEvent = {
+    productId: string
+    date: string
+    createdAt: string
+    id: string
+    quantity: number
+}
+
+function compareSaleCapacityEvents(
+    first: SaleCapacityConsumptionEvent,
+    second: SaleCapacityConsumptionEvent,
+): number {
+    const dateComparison =
+        first.date.localeCompare(
+            second.date,
+        )
+
+    if (dateComparison !== 0) {
+        return dateComparison
+    }
+
+    const createdComparison =
+        first.createdAt.localeCompare(
+            second.createdAt,
+        )
+
+    if (createdComparison !== 0) {
+        return createdComparison
+    }
+
+    return first.id.localeCompare(
+        second.id,
+    )
+}
+
+function buildSaleCapacityByProduct(
+    saleDate: string,
+    lots: InventoryLot[],
+    sales: Sale[],
+    saleItems: SaleItem[],
+    adjustments: InventoryAdjustment[],
+): Record<string, number> {
+    const lotsByProduct =
+        new Map<string, InventoryLot[]>()
+
+    for (const lot of lots) {
+        const current =
+            lotsByProduct.get(
+                lot.productId,
+            ) ?? []
+
+        current.push(lot)
+        lotsByProduct.set(
+            lot.productId,
+            current,
+        )
+    }
+
+    for (
+        const productLots of
+        lotsByProduct.values()
+    ) {
+        productLots.sort(
+            (first, second) => {
+                const dateComparison =
+                    first.purchaseDate.localeCompare(
+                        second.purchaseDate,
+                    )
+
+                if (
+                    dateComparison !== 0
+                ) {
+                    return dateComparison
+                }
+
+                const createdComparison =
+                    first.createdAt.localeCompare(
+                        second.createdAt,
+                    )
+
+                if (
+                    createdComparison !== 0
+                ) {
+                    return createdComparison
+                }
+
+                return first.id.localeCompare(
+                    second.id,
+                )
+            },
+        )
+    }
+
+    const saleById =
+        new Map(
+            sales.map((sale) => [
+                sale.id,
+                sale,
+            ]),
+        )
+
+    const eventsByProduct =
+        new Map<
+            string,
+            SaleCapacityConsumptionEvent[]
+        >()
+
+    function addConsumptionEvent(
+        event: SaleCapacityConsumptionEvent,
+    ) {
+        const current =
+            eventsByProduct.get(
+                event.productId,
+            ) ?? []
+
+        current.push(event)
+
+        eventsByProduct.set(
+            event.productId,
+            current,
+        )
+    }
+
+    for (const item of saleItems) {
+        const sale =
+            saleById.get(item.saleId)
+
+        if (!sale) {
+            continue
+        }
+
+        addConsumptionEvent({
+            productId: item.productId,
+            date: sale.saleDate,
+            createdAt:
+                sale.createdAt,
+            id:
+                `sale:${sale.id}:${item.id}`,
+            quantity: item.quantity,
+        })
+    }
+
+    for (
+        const adjustment of
+        adjustments
+    ) {
+        addConsumptionEvent({
+            productId:
+                adjustment.productId,
+            date:
+                adjustment.adjustmentDate,
+            createdAt:
+                adjustment.createdAt,
+            id:
+                `adjustment:${adjustment.id}`,
+            quantity:
+                adjustment.quantity,
+        })
+    }
+
+    const productIds =
+        new Set<string>([
+            ...lotsByProduct.keys(),
+            ...eventsByProduct.keys(),
+        ])
+
+    const capacityByProduct:
+        Record<string, number> = {}
+
+    /*
+     * Yeni toplu satış, seçilen gün içinde "şimdi" oluşturulacağı
+     * için aynı tarihli mevcut kayıtların arkasına yerleşir.
+     * Sonraki tarihli kayıtları da bozmaması gerektiğinden yalnız
+     * seçilen gündeki bakiye değil, o noktadan sonraki en düşük
+     * stok bakiyesi kapasiteyi belirler.
+     */
+    const insertionCreatedAt =
+        new Date().toISOString()
+
+    for (const productId of productIds) {
+        const productLots =
+            lotsByProduct.get(
+                productId,
+            ) ?? []
+
+        const events = [
+            ...(eventsByProduct.get(
+                productId,
+            ) ?? []),
+
+            {
+                productId,
+                date: saleDate,
+                createdAt:
+                    insertionCreatedAt,
+                id:
+                    '__bulk_sale_capacity__',
+                quantity: 0,
+            },
+        ].sort(
+            compareSaleCapacityEvents,
+        )
+
+        let lotIndex = 0
+        let balance = 0
+
+        let insertionReached = false
+        let capacity =
+            Number.POSITIVE_INFINITY
+
+        for (const event of events) {
+            while (
+                lotIndex <
+                productLots.length &&
+                productLots[
+                    lotIndex
+                ].purchaseDate <=
+                event.date
+            ) {
+                balance +=
+                    productLots[
+                        lotIndex
+                    ].quantityReceived
+
+                lotIndex += 1
+            }
+
+            if (
+                event.id ===
+                '__bulk_sale_capacity__'
+            ) {
+                insertionReached = true
+                capacity = balance
+                continue
+            }
+
+            balance -= event.quantity
+
+            if (insertionReached) {
+                capacity = Math.min(
+                    capacity,
+                    balance,
+                )
+            }
+        }
+
+        capacityByProduct[
+            productId
+        ] = Math.max(
+            0,
+            Number.isFinite(capacity)
+                ? capacity
+                : 0,
+        )
+    }
+
+    return capacityByProduct
+}
+
+function validatePreviewItems(
+    previewItems: FifoPreviewItem[],
+): void {
+    if (previewItems.length === 0) {
+        throw new Error(
+            'FIFO hesaplamak için en az bir ürün bulunmalıdır.',
+        )
+    }
+
+    for (const item of previewItems) {
+        if (
+            !Number.isSafeInteger(item.quantity) ||
+            item.quantity <= 0
+        ) {
+            throw new Error(
+                'FIFO hesaplamasında satış adedi geçersiz.',
+            )
+        }
+    }
+}
+
 export async function rebuildFifoStateInCurrentTransaction(): Promise<void> {
-    const [
-        lots,
-        sales,
-        saleItems,
-        adjustments,
-    ] = await Promise.all([
-        db.inventoryLots.toArray(),
+    const [lots, sales, adjustments] =
+        await Promise.all([
+            db.inventoryLots.toArray(),
 
-        db.sales
-            .where('status')
-            .equals('completed')
-            .toArray(),
+            db.sales
+                .where('status')
+                .equals('completed')
+                .toArray(),
 
-        db.saleItems.toArray(),
+            db.inventoryAdjustments
+                .where('direction')
+                .equals('decrease')
+                .toArray(),
+        ])
 
-        db.inventoryAdjustments
-            .where('direction')
-            .equals('decrease')
-            .toArray(),
-    ])
+    const saleItems =
+        await getSaleItemsForSales(sales)
 
     for (const lot of lots) {
         lot.quantityRemaining =
@@ -222,19 +591,9 @@ export async function rebuildFifoStateInCurrentTransaction(): Promise<void> {
     ])
 
     const itemsBySale =
-        new Map<string, SaleItem[]>()
+        buildSaleItemsBySale(saleItems)
 
-    for (const item of saleItems) {
-        const current =
-            itemsBySale.get(item.saleId) ?? []
-
-        current.push(item)
-
-        itemsBySale.set(
-            item.saleId,
-            current,
-        )
-    }
+    const lotPool = buildFifoLotPool(lots)
 
     const saleAllocations:
         InventoryAllocation[] = []
@@ -252,16 +611,15 @@ export async function rebuildFifoStateInCurrentTransaction(): Promise<void> {
 
     for (const event of events) {
         if (event.kind === 'sale') {
-            const items = (
+            const items =
                 itemsBySale.get(
                     event.sale.id,
                 ) ?? []
-            ).sort(compareSaleItems)
 
             for (const item of items) {
                 const slices =
-                    allocateFromLots(
-                        lots,
+                    allocateFromLotPool(
+                        lotPool,
                         item.productId,
                         event.sale.saleDate,
                         item.quantity,
@@ -288,14 +646,15 @@ export async function rebuildFifoStateInCurrentTransaction(): Promise<void> {
             continue
         }
 
-        const slices = allocateFromLots(
-            lots,
-            event.adjustment.productId,
-            event.adjustment.adjustmentDate,
-            event.adjustment.quantity,
-            (missing) =>
-                `Stok düzeltmesi tarihinde yeterli stok bulunmuyor. Eksik adet: ${missing}`,
-        )
+        const slices =
+            allocateFromLotPool(
+                lotPool,
+                event.adjustment.productId,
+                event.adjustment.adjustmentDate,
+                event.adjustment.quantity,
+                (missing) =>
+                    `Stok düzeltmesi tarihinde yeterli stok bulunmuyor. Eksik adet: ${missing}`,
+            )
 
         for (const slice of slices) {
             adjustmentAllocations.push({
@@ -331,15 +690,58 @@ export async function rebuildFifoStateInCurrentTransaction(): Promise<void> {
 }
 
 export const fifoService = {
+
+    async getSaleCapacityByDate(
+        saleDate: string,
+    ): Promise<Record<string, number>> {
+        if (!saleDate) {
+            throw new Error(
+                'Satış tarihi seçilmelidir.',
+            )
+        }
+
+        const [
+            lots,
+            sales,
+            adjustments,
+        ] = await Promise.all([
+            db.inventoryLots.toArray(),
+
+            db.sales
+                .where('status')
+                .equals('completed')
+                .toArray(),
+
+            db.inventoryAdjustments
+                .where('direction')
+                .equals('decrease')
+                .toArray(),
+        ])
+
+        const saleItems =
+            await getSaleItemsForSales(
+                sales,
+            )
+
+        return buildSaleCapacityByProduct(
+            saleDate,
+            lots,
+            sales,
+            saleItems,
+            adjustments,
+        )
+    },
+
     async previewSale(
         saleDate: string,
         previewItems: FifoPreviewItem[],
         options: FifoPreviewOptions = {},
     ): Promise<FifoPreviewResult> {
+        validatePreviewItems(previewItems)
+
         const [
             storedLots,
             allStoredSales,
-            allStoredSaleItems,
             storedAdjustments,
         ] = await Promise.all([
             db.inventoryLots.toArray(),
@@ -349,32 +751,16 @@ export const fifoService = {
                 .equals('completed')
                 .toArray(),
 
-            db.saleItems.toArray(),
-
             db.inventoryAdjustments
                 .where('direction')
                 .equals('decrease')
                 .toArray(),
         ])
 
-        if (previewItems.length === 0) {
-            throw new Error(
-                'FIFO hesaplamak için en az bir ürün bulunmalıdır.',
+        const allStoredSaleItems =
+            await getSaleItemsForSales(
+                allStoredSales,
             )
-        }
-
-        for (const item of previewItems) {
-            if (
-                !Number.isSafeInteger(
-                    item.quantity,
-                ) ||
-                item.quantity <= 0
-            ) {
-                throw new Error(
-                    'FIFO hesaplamasında satış adedi geçersiz.',
-                )
-            }
-        }
 
         const lots = storedLots.map(
             (lot) => ({
@@ -384,9 +770,7 @@ export const fifoService = {
             }),
         )
 
-        let storedSales =
-            allStoredSales
-
+        let storedSales = allStoredSales
         let storedSaleItems =
             allStoredSaleItems
 
@@ -411,16 +795,14 @@ export const fifoService = {
             }
 
             /*
-             * Düzenlenen satış aynı gün içindeki
-             * eski kronolojik konumunu ve kimliğini
-             * korur. Böylece önizleme ile gerçek
-             * güncelleme aynı sırada çalışır.
+             * Düzenlenen satış aynı gün içindeki eski kronolojik
+             * konumunu ve kimliğini korur. Böylece önizleme ile
+             * gerçek güncelleme aynı sırada çalışır.
              */
             previewCreatedAt =
                 replacedSale.createdAt
 
-            previewSaleId =
-                replacedSale.id
+            previewSaleId = replacedSale.id
 
             storedSales =
                 allStoredSales.filter(
@@ -445,16 +827,13 @@ export const fifoService = {
             updatedAt: previewCreatedAt,
         }
 
-        const previewSaleItems:
-            SaleItem[] =
+        const previewSaleItems: SaleItem[] =
             previewItems.map(
                 (item, index) => ({
                     id: `__fifo_preview_item_${index}__`,
                     saleId: previewSaleId,
-                    productId:
-                        item.productId,
-                    quantity:
-                        item.quantity,
+                    productId: item.productId,
+                    quantity: item.quantity,
                     listUnitPriceMinor: 0,
                     actualUnitPriceMinor: 0,
                     createdAt:
@@ -475,50 +854,45 @@ export const fifoService = {
         ]
 
         const itemsBySale =
-            new Map<string, SaleItem[]>()
-
-        for (const item of allSaleItems) {
-            const current =
-                itemsBySale.get(
-                    item.saleId,
-                ) ?? []
-
-            current.push(item)
-
-            itemsBySale.set(
-                item.saleId,
-                current,
+            buildSaleItemsBySale(
+                allSaleItems,
             )
-        }
+
+        const lotPool =
+            buildFifoLotPool(lots)
+
+        const previewItemIndexById =
+            new Map(
+                previewSaleItems.map(
+                    (item, index) => [
+                        item.id,
+                        index,
+                    ],
+                ),
+            )
 
         const allocations:
             FifoPreviewAllocation[] = []
 
         const itemResults:
             FifoPreviewItemResult[] =
-            previewItems.map(
-                (item) => ({
-                    productId:
-                        item.productId,
-                    quantity:
-                        item.quantity,
-                    totalCostMinor: 0,
-                }),
-            )
+            previewItems.map((item) => ({
+                productId: item.productId,
+                quantity: item.quantity,
+                totalCostMinor: 0,
+            }))
 
-        const events =
-            buildConsumptionEvents(
-                allSales,
-                storedAdjustments,
-            )
+        const events = buildConsumptionEvents(
+            allSales,
+            storedAdjustments,
+        )
 
         for (const event of events) {
             if (
-                event.kind ===
-                'adjustment'
+                event.kind === 'adjustment'
             ) {
-                allocateFromLots(
-                    lots,
+                allocateFromLotPool(
+                    lotPool,
                     event.adjustment.productId,
                     event.adjustment.adjustmentDate,
                     event.adjustment.quantity,
@@ -529,11 +903,10 @@ export const fifoService = {
                 continue
             }
 
-            const items = (
+            const items =
                 itemsBySale.get(
                     event.sale.id,
                 ) ?? []
-            ).sort(compareSaleItems)
 
             for (const item of items) {
                 const isPreviewSale =
@@ -541,8 +914,8 @@ export const fifoService = {
                     previewSaleId
 
                 const slices =
-                    allocateFromLots(
-                        lots,
+                    allocateFromLotPool(
+                        lotPool,
                         item.productId,
                         event.sale.saleDate,
                         item.quantity,
@@ -557,14 +930,13 @@ export const fifoService = {
                 }
 
                 const previewItemIndex =
-                    previewSaleItems.findIndex(
-                        (previewItem) =>
-                            previewItem.id ===
-                            item.id,
+                    previewItemIndexById.get(
+                        item.id,
                     )
 
                 if (
-                    previewItemIndex < 0
+                    previewItemIndex ===
+                    undefined
                 ) {
                     continue
                 }
