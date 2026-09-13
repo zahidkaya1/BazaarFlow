@@ -4,7 +4,10 @@ import type {
     SaleItem,
 } from '../types/sale'
 import { createId } from '../utils/createId'
-import { rebuildFifoStateInCurrentTransaction } from './fifoService'
+import {
+    rebuildFifoStateInCurrentTransaction,
+    tryAllocateSaleIncrementallyInCurrentTransaction,
+} from './fifoService'
 
 export type CreateSaleItemInput = {
     productId: string
@@ -994,7 +997,15 @@ export const salesService = {
                     saleItems,
                 )
 
-                await rebuildFifoStateInCurrentTransaction()
+                const allocatedIncrementally =
+                    await tryAllocateSaleIncrementallyInCurrentTransaction(
+                        sale,
+                        saleItems,
+                    )
+
+                if (!allocatedIncrementally) {
+                    await rebuildFifoStateInCurrentTransaction()
+                }
 
                 return sale
             },
