@@ -51,6 +51,23 @@ export type SaleHistoryRecord = {
     grossProfitMinor: number
 }
 
+export type SaleHistorySummary = {
+    transactionCount: number
+    totalQuantity: number
+
+    listTotalMinor: number
+    revenueMinor: number
+    discountMinor: number
+
+    costMinor: number
+    grossProfitMinor: number
+}
+
+export type ProductSalesQuantity = {
+    productId: string
+    quantity: number
+}
+
 function normalizeOptionalText(
     value?: string,
 ): string | undefined {
@@ -318,15 +335,24 @@ async function buildSaleItems(
     inputs: CreateSaleItemInput[],
     timestamp: string,
 ): Promise<SaleItem[]> {
+    const products =
+        await db.products.bulkGet(
+            inputs.map(
+                (input) => input.productId,
+            ),
+        )
+
     const saleItems: SaleItem[] = []
 
-    for (const input of inputs) {
-        const product =
-            await db.products.get(
-                input.productId,
-            )
+    for (
+        let index = 0;
+        index < inputs.length;
+        index += 1
+    ) {
+        const input = inputs[index]
+        const product = products[index]
 
-        if (!product) {
+        if (!input || !product) {
             throw new Error(
                 'Satıştaki ürün bulunamadı.',
             )
@@ -435,6 +461,359 @@ function sortSalesDescending(
     )
 }
 
+
+function createEmptySummary(): SaleHistorySummary {
+    return {
+        transactionCount: 0,
+        totalQuantity: 0,
+
+        listTotalMinor: 0,
+        revenueMinor: 0,
+        discountMinor: 0,
+
+        costMinor: 0,
+        grossProfitMinor: 0,
+    }
+}
+
+async function getSalesByDateRange(
+    startDate: string,
+    endDate: string,
+): Promise<Sale[]> {
+    if (
+        startDate.length !== 10 ||
+        endDate.length !== 10 ||
+        startDate > endDate
+    ) {
+        return []
+    }
+
+    return db.sales
+        .where('saleDate')
+        .between(
+            startDate,
+            endDate,
+            true,
+            true,
+        )
+        .toArray()
+}
+
+async function buildHistoryForSales(
+    sales: Sale[],
+): Promise<SaleHistoryRecord[]> {
+    if (sales.length === 0) {
+        return []
+    }
+
+    const saleIds =
+        sales.map((sale) => sale.id)
+
+    const saleItems =
+        await db.saleItems
+            .where('saleId')
+            .anyOf(saleIds)
+            .toArray()
+
+    const saleItemIds =
+        saleItems.map((item) => item.id)
+
+    const allocations =
+        saleItemIds.length > 0
+            ? await db.inventoryAllocations
+                .where('saleItemId')
+                .anyOf(saleItemIds)
+                .toArray()
+            : []
+
+    const productIds =
+        Array.from(
+            new Set(
+                saleItems.map(
+                    (item) => item.productId,
+                ),
+            ),
+        )
+
+    const products =
+        productIds.length > 0
+            ? await db.products.bulkGet(
+                productIds,
+            )
+            : []
+
+    const productNames =
+        new Map<string, string>()
+
+    products.forEach(
+        (product, index) => {
+            if (product) {
+                productNames.set(
+                    productIds[index],
+                    product.name,
+                )
+            }
+        },
+    )
+
+    const itemsBySale =
+        new Map<string, SaleItem[]>()
+
+    for (const item of saleItems) {
+        const current =
+            itemsBySale.get(
+                item.saleId,
+            ) ?? []
+
+        current.push(item)
+
+        itemsBySale.set(
+            item.saleId,
+            current,
+        )
+    }
+
+    const costBySaleItem =
+        new Map<string, number>()
+
+    for (const allocation of allocations) {
+        const cost =
+            allocation.quantity *
+            allocation.unitCostMinor
+
+        costBySaleItem.set(
+            allocation.saleItemId,
+            (costBySaleItem.get(
+                allocation.saleItemId,
+            ) ?? 0) + cost,
+        )
+    }
+
+    return [...sales]
+        .sort(sortSalesDescending)
+        .map((sale) => {
+            const items = (
+                itemsBySale.get(
+                    sale.id,
+                ) ?? []
+            ).map(
+                (item): SaleHistoryItem => {
+                    const costMinor =
+                        costBySaleItem.get(
+                            item.id,
+                        ) ?? 0
+
+                    const revenueMinor =
+                        getSaleItemRevenueMinor(
+                            item,
+                        )
+
+                    const discountMinor =
+                        getSaleItemDiscountMinor(
+                            item,
+                        )
+
+                    return {
+                        ...item,
+
+                        productName:
+                            item.productNameSnapshot ??
+                            productNames.get(
+                                item.productId,
+                            ) ??
+                            'Bilinmeyen ürün',
+
+                        revenueMinor,
+                        discountMinor,
+
+                        costMinor,
+
+                        grossProfitMinor:
+                            revenueMinor -
+                            costMinor,
+                    }
+                },
+            )
+
+            const totalQuantity =
+                items.reduce(
+                    (total, item) =>
+                        total + item.quantity,
+                    0,
+                )
+
+            const listTotalMinor =
+                items.reduce(
+                    (total, item) =>
+                        total +
+                        item.quantity *
+                        item.listUnitPriceMinor,
+                    0,
+                )
+
+            const revenueMinor =
+                items.reduce(
+                    (total, item) =>
+                        total + item.revenueMinor,
+                    0,
+                )
+
+            const discountMinor =
+                items.reduce(
+                    (total, item) =>
+                        total + item.discountMinor,
+                    0,
+                )
+
+            const costMinor =
+                items.reduce(
+                    (total, item) =>
+                        total + item.costMinor,
+                    0,
+                )
+
+            return {
+                sale,
+                items,
+
+                totalQuantity,
+
+                listTotalMinor,
+                revenueMinor,
+                discountMinor,
+
+                costMinor,
+
+                grossProfitMinor:
+                    revenueMinor -
+                    costMinor,
+            }
+        })
+}
+
+async function buildSummaryForSales(
+    sales: Sale[],
+): Promise<SaleHistorySummary> {
+    const completedSales =
+        sales.filter(
+            (sale) =>
+                sale.status === 'completed',
+        )
+
+    if (completedSales.length === 0) {
+        return createEmptySummary()
+    }
+
+    const saleIds =
+        completedSales.map(
+            (sale) => sale.id,
+        )
+
+    const saleItems =
+        await db.saleItems
+            .where('saleId')
+            .anyOf(saleIds)
+            .toArray()
+
+    const saleItemIds =
+        saleItems.map((item) => item.id)
+
+    const allocations =
+        saleItemIds.length > 0
+            ? await db.inventoryAllocations
+                .where('saleItemId')
+                .anyOf(saleItemIds)
+                .toArray()
+            : []
+
+    let totalQuantity = 0
+    let listTotalMinor = 0
+    let revenueMinor = 0
+    let discountMinor = 0
+    let costMinor = 0
+
+    for (const item of saleItems) {
+        totalQuantity += item.quantity
+
+        listTotalMinor +=
+            item.quantity *
+            item.listUnitPriceMinor
+
+        revenueMinor +=
+            getSaleItemRevenueMinor(item)
+
+        discountMinor +=
+            getSaleItemDiscountMinor(item)
+    }
+
+    for (const allocation of allocations) {
+        costMinor +=
+            allocation.quantity *
+            allocation.unitCostMinor
+    }
+
+    return {
+        transactionCount:
+            completedSales.length,
+        totalQuantity,
+
+        listTotalMinor,
+        revenueMinor,
+        discountMinor,
+
+        costMinor,
+        grossProfitMinor:
+            revenueMinor - costMinor,
+    }
+}
+
+async function getRecentSales(
+    limit: number,
+): Promise<Sale[]> {
+    if (
+        !Number.isSafeInteger(limit) ||
+        limit <= 0
+    ) {
+        return []
+    }
+
+    const result: Sale[] = []
+    let beforeDate: string | undefined
+
+    while (result.length < limit) {
+        const anchor =
+            beforeDate === undefined
+                ? await db.sales
+                    .orderBy('saleDate')
+                    .last()
+                : await db.sales
+                    .where('saleDate')
+                    .below(beforeDate)
+                    .last()
+
+        if (!anchor) {
+            break
+        }
+
+        const sameDateSales =
+            await db.sales
+                .where('saleDate')
+                .equals(anchor.saleDate)
+                .toArray()
+
+        sameDateSales.sort(
+            sortSalesDescending,
+        )
+
+        result.push(...sameDateSales)
+        beforeDate = anchor.saleDate
+    }
+
+    return result
+        .sort(sortSalesDescending)
+        .slice(0, limit)
+}
+
 export const salesService = {
     async getAll(): Promise<Sale[]> {
         const sales =
@@ -465,193 +844,98 @@ export const salesService = {
     async getHistory(): Promise<
         SaleHistoryRecord[]
     > {
-        const [
-            sales,
-            saleItems,
-            allocations,
-            products,
-        ] = await Promise.all([
-            db.sales.toArray(),
-            db.saleItems.toArray(),
-            db.inventoryAllocations.toArray(),
-            db.products.toArray(),
-        ])
+        const sales =
+            await db.sales.toArray()
 
-        const productNames =
-            new Map(
-                products.map(
-                    (product) => [
-                        product.id,
-                        product.name,
-                    ],
-                ),
+        return buildHistoryForSales(
+            sales,
+        )
+    },
+
+    async getHistoryByDateRange(
+        startDate: string,
+        endDate: string,
+    ): Promise<SaleHistoryRecord[]> {
+        const sales =
+            await getSalesByDateRange(
+                startDate,
+                endDate,
             )
 
-        const itemsBySale =
-            new Map<
-                string,
-                SaleItem[]
-            >()
+        return buildHistoryForSales(
+            sales,
+        )
+    },
+
+    async getSummaryByDateRange(
+        startDate: string,
+        endDate: string,
+    ): Promise<SaleHistorySummary> {
+        const sales =
+            await getSalesByDateRange(
+                startDate,
+                endDate,
+            )
+
+        return buildSummaryForSales(
+            sales,
+        )
+    },
+
+    async getRecentHistory(
+        limit = 5,
+    ): Promise<SaleHistoryRecord[]> {
+        const sales =
+            await getRecentSales(limit)
+
+        return buildHistoryForSales(
+            sales,
+        )
+    },
+
+    async getCompletedProductQuantities(): Promise<
+        ProductSalesQuantity[]
+    > {
+        const completedSales =
+            await db.sales
+                .where('status')
+                .equals('completed')
+                .toArray()
+
+        if (completedSales.length === 0) {
+            return []
+        }
+
+        const saleItems =
+            await db.saleItems
+                .where('saleId')
+                .anyOf(
+                    completedSales.map(
+                        (sale) => sale.id,
+                    ),
+                )
+                .toArray()
+
+        const quantities =
+            new Map<string, number>()
 
         for (const item of saleItems) {
-            const current =
-                itemsBySale.get(
-                    item.saleId,
-                ) ?? []
-
-            current.push(item)
-
-            itemsBySale.set(
-                item.saleId,
-                current,
+            quantities.set(
+                item.productId,
+                (quantities.get(
+                    item.productId,
+                ) ?? 0) +
+                item.quantity,
             )
         }
 
-        const costBySaleItem =
-            new Map<
-                string,
-                number
-            >()
-
-        for (
-            const allocation of
-            allocations
-        ) {
-            const cost =
-                allocation.quantity *
-                allocation.unitCostMinor
-
-            costBySaleItem.set(
-                allocation.saleItemId,
-                (costBySaleItem.get(
-                    allocation.saleItemId,
-                ) ?? 0) + cost,
-            )
-        }
-
-        return sales
-            .sort(
-                sortSalesDescending,
-            )
-            .map((sale) => {
-                const items = (
-                    itemsBySale.get(
-                        sale.id,
-                    ) ?? []
-                ).map(
-                    (
-                        item,
-                    ): SaleHistoryItem => {
-                        const costMinor =
-                            costBySaleItem.get(
-                                item.id,
-                            ) ?? 0
-
-                        const revenueMinor =
-                            getSaleItemRevenueMinor(
-                                item,
-                            )
-
-                        const discountMinor =
-                            getSaleItemDiscountMinor(
-                                item,
-                            )
-
-                        return {
-                            ...item,
-
-                            productName:
-                                item.productNameSnapshot ??
-                                productNames.get(
-                                    item.productId,
-                                ) ??
-                                'Bilinmeyen ürün',
-
-                            revenueMinor,
-                            discountMinor,
-
-                            costMinor,
-
-                            grossProfitMinor:
-                                revenueMinor -
-                                costMinor,
-                        }
-                    },
-                )
-
-                const totalQuantity =
-                    items.reduce(
-                        (
-                            total,
-                            item,
-                        ) =>
-                            total +
-                            item.quantity,
-                        0,
-                    )
-
-                const listTotalMinor =
-                    items.reduce(
-                        (
-                            total,
-                            item,
-                        ) =>
-                            total +
-                            item.quantity *
-                            item.listUnitPriceMinor,
-                        0,
-                    )
-
-                const revenueMinor =
-                    items.reduce(
-                        (
-                            total,
-                            item,
-                        ) =>
-                            total +
-                            item.revenueMinor,
-                        0,
-                    )
-
-                const discountMinor =
-                    items.reduce(
-                        (
-                            total,
-                            item,
-                        ) =>
-                            total +
-                            item.discountMinor,
-                        0,
-                    )
-
-                const costMinor =
-                    items.reduce(
-                        (
-                            total,
-                            item,
-                        ) =>
-                            total +
-                            item.costMinor,
-                        0,
-                    )
-
-                return {
-                    sale,
-                    items,
-
-                    totalQuantity,
-
-                    listTotalMinor,
-                    revenueMinor,
-                    discountMinor,
-
-                    costMinor,
-
-                    grossProfitMinor:
-                        revenueMinor -
-                        costMinor,
-                }
-            })
+        return Array.from(
+            quantities.entries(),
+            ([productId, quantity]) => ({
+                productId,
+                quantity,
+            }),
+        )
     },
 
     async create(

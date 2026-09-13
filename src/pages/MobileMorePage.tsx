@@ -12,7 +12,7 @@ import {
 import { Link } from 'react-router-dom'
 import {
     salesService,
-    type SaleHistoryRecord,
+    type SaleHistorySummary,
 } from '../services/salesService'
 import { formatMoneyFromMinor } from '../utils/money'
 
@@ -27,34 +27,34 @@ function getTodayDateValue(): string {
 }
 
 function MobileMorePage() {
-    const saleHistory = useLiveQuery(
-        () => salesService.getHistory(),
-        [],
-        [] as SaleHistoryRecord[],
-    )
-
     const today = getTodayDateValue()
 
-    const todayCompletedSales = saleHistory.filter(
-        (record) =>
-            record.sale.saleDate === today &&
-            record.sale.status === 'completed',
+    const todaySummary = useLiveQuery(
+        () =>
+            salesService.getSummaryByDateRange(
+                today,
+                today,
+            ),
+        [today],
+        {
+            transactionCount: 0,
+            totalQuantity: 0,
+            listTotalMinor: 0,
+            revenueMinor: 0,
+            discountMinor: 0,
+            costMinor: 0,
+            grossProfitMinor: 0,
+        } as SaleHistorySummary,
     )
 
-    const todayRevenueMinor = todayCompletedSales.reduce(
-        (total, record) => total + record.revenueMinor,
-        0,
-    )
+    const todayRevenueMinor =
+        todaySummary.revenueMinor
 
-    const todayGrossProfitMinor = todayCompletedSales.reduce(
-        (total, record) => total + record.grossProfitMinor,
-        0,
-    )
+    const todayGrossProfitMinor =
+        todaySummary.grossProfitMinor
 
-    const todayQuantity = todayCompletedSales.reduce(
-        (total, record) => total + record.totalQuantity,
-        0,
-    )
+    const todayQuantity =
+        todaySummary.totalQuantity
 
     return (
         <div className="dashboard mobile-more-page">
@@ -110,7 +110,7 @@ function MobileMorePage() {
                         <div>
                             <span>Satış</span>
                             <strong>
-                                {todayCompletedSales.length}
+                                {todaySummary.transactionCount}
                             </strong>
                             <small>
                                 {todayQuantity} ürün

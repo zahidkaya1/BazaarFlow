@@ -1028,29 +1028,6 @@ function createCsvRow(
 }
 
 function ReportsPage() {
-    const data = useLiveQuery(
-        async () => {
-            const [products, lots, history] =
-                await Promise.all([
-                    productService.getAll(),
-                    inventoryService.getAll(),
-                    salesService.getHistory(),
-                ])
-
-            return {
-                products,
-                lots,
-                history,
-            }
-        },
-        [],
-        {
-            products: [] as Product[],
-            lots: [] as InventoryLot[],
-            history: [] as SaleHistoryRecord[],
-        },
-    )
-
     const [period, setPeriod] =
         useState<ReportPeriod>('month')
 
@@ -1086,17 +1063,6 @@ function ReportsPage() {
             ? 'bar'
             : dailyChartMode
 
-    const productMap = useMemo(
-        () =>
-            new Map(
-                data.products.map((product) => [
-                    product.id,
-                    product,
-                ]),
-            ),
-        [data.products],
-    )
-
     const reportRange = useMemo(() => {
         switch (period) {
             case 'today': {
@@ -1129,19 +1095,49 @@ function ReportsPage() {
         customEndDate,
     ])
 
+    const data = useLiveQuery(
+        async () => {
+            const [products, lots, history] =
+                await Promise.all([
+                    productService.getAll(),
+                    inventoryService.getAll(),
+                    salesService.getHistoryByDateRange(
+                        reportRange.start,
+                        reportRange.end,
+                    ),
+                ])
+
+            return {
+                products,
+                lots,
+                history,
+            }
+        },
+        [reportRange.start, reportRange.end],
+        {
+            products: [] as Product[],
+            lots: [] as InventoryLot[],
+            history: [] as SaleHistoryRecord[],
+        },
+    )
+
+    const productMap = useMemo(
+        () =>
+            new Map(
+                data.products.map((product) => [
+                    product.id,
+                    product,
+                ]),
+            ),
+        [data.products],
+    )
+
     const filteredHistory = useMemo(() => {
         const query = normalizeSearch(
             productSearch,
         )
 
         return data.history
-            .filter(
-                (record) =>
-                    record.sale.saleDate >=
-                    reportRange.start &&
-                    record.sale.saleDate <=
-                    reportRange.end,
-            )
             .map((record) =>
                 filterRecordItems(
                     record,
@@ -1157,7 +1153,6 @@ function ReportsPage() {
             )
     }, [
         data.history,
-        reportRange,
         productSearch,
         productMap,
     ])

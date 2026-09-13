@@ -16,7 +16,9 @@ import { inventoryService } from '../services/inventoryService'
 import { productService } from '../services/productService'
 import {
     salesService,
+    type ProductSalesQuantity,
     type SaleHistoryRecord,
+    type SaleHistorySummary,
 } from '../services/salesService'
 import type { InventoryLot } from '../types/inventoryLot'
 import type { Product } from '../types/product'
@@ -39,36 +41,60 @@ function formatDate(value: string): string {
 }
 
 function DashboardPage() {
+    const today = getTodayDateValue()
+
     const dashboardData = useLiveQuery(
         async () => {
-            const [products, lots, saleHistory] =
-                await Promise.all([
-                    productService.getAll(),
-                    inventoryService.getAll(),
-                    salesService.getHistory(),
-                ])
+            const [
+                products,
+                lots,
+                todaySummary,
+                recentSales,
+                bestSellingQuantities,
+            ] = await Promise.all([
+                productService.getAll(),
+                inventoryService.getAll(),
+                salesService.getSummaryByDateRange(
+                    today,
+                    today,
+                ),
+                salesService.getRecentHistory(5),
+                salesService.getCompletedProductQuantities(),
+            ])
 
             return {
                 products,
                 lots,
-                saleHistory,
+                todaySummary,
+                recentSales,
+                bestSellingQuantities,
             }
         },
-        [],
+        [today],
         {
             products: [] as Product[],
             lots: [] as InventoryLot[],
-            saleHistory: [] as SaleHistoryRecord[],
+            todaySummary: {
+                transactionCount: 0,
+                totalQuantity: 0,
+                listTotalMinor: 0,
+                revenueMinor: 0,
+                discountMinor: 0,
+                costMinor: 0,
+                grossProfitMinor: 0,
+            } as SaleHistorySummary,
+            recentSales: [] as SaleHistoryRecord[],
+            bestSellingQuantities: [] as ProductSalesQuantity[],
         },
     )
 
     const {
         products,
         lots,
-        saleHistory,
+        todaySummary,
+        recentSales,
+        bestSellingQuantities,
     } = dashboardData
-
-    const today = getTodayDateValue()
 
     const productMap = useMemo(
         () =>
@@ -113,41 +139,17 @@ function DashboardPage() {
         return values
     }, [lots])
 
-    const completedSales = saleHistory.filter(
-        (record) =>
-            record.sale.status === 'completed',
-    )
-
-    const todaySales = completedSales.filter(
-        (record) =>
-            record.sale.saleDate === today,
-    )
-
-    const todayRevenueMinor = todaySales.reduce(
-        (total, record) =>
-            total + record.revenueMinor,
-        0,
-    )
+    const todayRevenueMinor =
+        todaySummary.revenueMinor
 
     const todayGrossProfitMinor =
-        todaySales.reduce(
-            (total, record) =>
-                total + record.grossProfitMinor,
-            0,
-        )
+        todaySummary.grossProfitMinor
 
-    const todayQuantity = todaySales.reduce(
-        (total, record) =>
-            total + record.totalQuantity,
-        0,
-    )
+    const todayQuantity =
+        todaySummary.totalQuantity
 
     const todayDiscountMinor =
-        todaySales.reduce(
-            (total, record) =>
-                total + record.discountMinor,
-            0,
-        )
+        todaySummary.discountMinor
 
     const totalStock = lots.reduce(
         (total, lot) =>
@@ -195,27 +197,9 @@ function DashboardPage() {
         [products, stockByProduct],
     )
 
-    const recentSales = saleHistory.slice(0, 5)
-
-    const bestSellingQuantities =
-        new Map<string, number>()
-
-    for (const record of completedSales) {
-        for (const item of record.items) {
-            bestSellingQuantities.set(
-                item.productId,
-                (bestSellingQuantities.get(
-                    item.productId,
-                ) ?? 0) + item.quantity,
-            )
-        }
-    }
-
     const bestSellingProducts =
-        Array.from(
-            bestSellingQuantities.entries(),
-        )
-            .map(([productId, quantity]) => ({
+        bestSellingQuantities
+            .map(({ productId, quantity }) => ({
                 productId,
                 quantity,
 
