@@ -451,9 +451,116 @@ async function getCurrentAvailableLots(
     return lots.filter(
         (lot) =>
             lot.purchaseDate <=
-            eventDate &&
+                eventDate &&
             lot.quantityRemaining > 0,
     )
+}
+
+
+type PreviewReplayData = {
+    lots: InventoryLot[]
+    sales: Sale[]
+    saleItems: SaleItem[]
+    adjustments: InventoryAdjustment[]
+}
+
+async function getPreviewReplayData(
+    productIds: string[],
+): Promise<PreviewReplayData> {
+    const uniqueProductIds =
+        Array.from(
+            new Set(productIds),
+        )
+
+    if (uniqueProductIds.length === 0) {
+        return {
+            lots: [],
+            sales: [],
+            saleItems: [],
+            adjustments: [],
+        }
+    }
+
+    /*
+     * FIFO her ürün için bağımsız ilerler. Preview yalnızca
+     * satışta bulunan ürünlerin lotlarını ve tüketim geçmişini
+     * etkileyebileceği için fallback replay sırasında diğer
+     * ürünlerin verisini IndexedDB'den hiç çekmiyoruz.
+     */
+    const [
+        lots,
+        relevantSaleItems,
+        relevantAdjustments,
+    ] = await Promise.all([
+        db.inventoryLots
+            .where('productId')
+            .anyOf(uniqueProductIds)
+            .toArray(),
+
+        db.saleItems
+            .where('productId')
+            .anyOf(uniqueProductIds)
+            .toArray(),
+
+        db.inventoryAdjustments
+            .where('productId')
+            .anyOf(uniqueProductIds)
+            .toArray(),
+    ])
+
+    const saleIds =
+        Array.from(
+            new Set(
+                relevantSaleItems.map(
+                    (item) => item.saleId,
+                ),
+            ),
+        )
+
+    const saleRecords =
+        saleIds.length > 0
+            ? await db.sales.bulkGet(
+                saleIds,
+            )
+            : []
+
+    const sales =
+        saleRecords.filter(
+            (sale): sale is Sale =>
+                Boolean(
+                    sale &&
+                    sale.status ===
+                        'completed',
+                ),
+        )
+
+    const completedSaleIds =
+        new Set(
+            sales.map(
+                (sale) => sale.id,
+            ),
+        )
+
+    return {
+        lots,
+
+        sales,
+
+        saleItems:
+            relevantSaleItems.filter(
+                (item) =>
+                    completedSaleIds.has(
+                        item.saleId,
+                    ),
+            ),
+
+        adjustments:
+            relevantAdjustments.filter(
+                (adjustment) =>
+                    adjustment.direction ===
+                    'decrease',
+            ),
+    }
 }
 
 function createPreviewSaleItems(
@@ -1181,41 +1288,6 @@ export const fifoService = {
             }
         }
 
-        const [
-            storedLots,
-            allStoredSales,
-            storedAdjustments,
-        ] = await Promise.all([
-            db.inventoryLots.toArray(),
-
-            db.sales
-                .where('status')
-                .equals('completed')
-                .toArray(),
-
-            db.inventoryAdjustments
-                .where('direction')
-                .equals('decrease')
-                .toArray(),
-        ])
-
-        const allStoredSaleItems =
-            await getSaleItemsForSales(
-                allStoredSales,
-            )
-
-        const lots = storedLots.map(
-            (lot) => ({
-                ...lot,
-                quantityRemaining:
-                    lot.quantityReceived,
-            }),
-        )
-
-        let storedSales = allStoredSales
-        let storedSaleItems =
-            allStoredSaleItems
-
         let previewCreatedAt =
             initialPreviewCreatedAt
 
@@ -1224,13 +1296,15 @@ export const fifoService = {
 
         if (options.replacingSaleId) {
             const replacedSale =
-                allStoredSales.find(
-                    (sale) =>
-                        sale.id ===
-                        options.replacingSaleId,
+                await db.sales.get(
+                    options.replacingSaleId,
                 )
 
-            if (!replacedSale) {
+            if (
+                !replacedSale ||
+                replacedSale.status !==
+                    'completed'
+            ) {
                 throw new Error(
                     'Düzenlenecek satış bulunamadı.',
                 )
@@ -1245,21 +1319,45 @@ export const fifoService = {
                 replacedSale.createdAt
 
             previewSaleId = replacedSale.id
+        }
 
-            storedSales =
-                allStoredSales.filter(
+        const replayData =
+            await getPreviewReplayData(
+                previewItems.map(
+                    (item) =>
+                        item.productId,
+                ),
+            )
+
+        const lots =
+            replayData.lots.map(
+                (lot) => ({
+                    ...lot,
+                    quantityRemaining:
+                        lot.quantityReceived,
+                }),
+            )
+
+        const storedSales =
+            options.replacingSaleId
+                ? replayData.sales.filter(
                     (sale) =>
                         sale.id !==
                         options.replacingSaleId,
                 )
+                : replayData.sales
 
-            storedSaleItems =
-                allStoredSaleItems.filter(
+        const storedSaleItems =
+            options.replacingSaleId
+                ? replayData.saleItems.filter(
                     (item) =>
                         item.saleId !==
                         options.replacingSaleId,
                 )
-        }
+                : replayData.saleItems
+
+        const storedAdjustments =
+            replayData.adjustments
 
         const previewSale: Sale = {
             id: previewSaleId,
