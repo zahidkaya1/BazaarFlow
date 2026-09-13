@@ -21,6 +21,11 @@ import {
 } from '../services/salesService'
 import type { Product } from '../types/product'
 import {
+    formatDateValue,
+    formatDisplayDate,
+    getTodayDateValue,
+} from '../utils/dateOnly'
+import {
     formatMoneyFromMinor,
     parseMoneyToMinor,
 } from '../utils/money'
@@ -100,27 +105,6 @@ function rebuildFilteredHistoryRecord(
     }
 }
 
-function formatDate(value: string): string {
-    const [year, month, day] =
-        value.split('-')
-
-    return `${day}.${month}.${year}`
-}
-
-
-function getTodayDateValue(): string {
-    const now = new Date()
-
-    const year = now.getFullYear()
-    const month = String(
-        now.getMonth() + 1,
-    ).padStart(2, '0')
-    const day = String(
-        now.getDate(),
-    ).padStart(2, '0')
-
-    return `${year}-${month}-${day}`
-}
 
 function getWeekStartDateValue(): string {
     const now = new Date()
@@ -131,22 +115,13 @@ function getWeekStartDateValue(): string {
             ? -6
             : 1 - dayOfWeek
 
-    const monday = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate() + mondayOffset,
+    return formatDateValue(
+        new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate() + mondayOffset,
+        ),
     )
-
-    const year =
-        monday.getFullYear()
-    const month = String(
-        monday.getMonth() + 1,
-    ).padStart(2, '0')
-    const day = String(
-        monday.getDate(),
-    ).padStart(2, '0')
-
-    return `${year}-${month}-${day}`
 }
 
 function clearBasketDiscounts(
@@ -823,7 +798,7 @@ function SalesHistoryPage() {
 
         const confirmed =
             window.confirm(
-                `${formatDate(
+                `${formatDisplayDate(
                     record.sale.saleDate,
                 )} tarihli satış iptal edilsin mi?\n\n` +
                 'Satış geçmişte kalacak ve bu satışın tükettiği stok geri yüklenecek.',
@@ -1480,7 +1455,7 @@ function SalesHistoryPage() {
                                         <div>
                                             <div className="sale-history-date-row">
                                                 <strong>
-                                                    {formatDate(
+                                                    {formatDisplayDate(
                                                         record
                                                             .sale
                                                             .saleDate,
@@ -2073,7 +2048,7 @@ function SalesHistoryPage() {
                                             <div className="mobile-sale-card-main">
                                                 <div className="mobile-sale-card-title">
                                                     <strong>
-                                                        {formatDate(
+                                                        {formatDisplayDate(
                                                             record.sale
                                                                 .saleDate,
                                                         )}
