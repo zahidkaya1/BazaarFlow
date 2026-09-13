@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
+import MobilePageHeader from '../components/mobile/MobilePageHeader'
 import { inventoryService } from '../services/inventoryService'
 import { productService } from '../services/productService'
 import {
@@ -20,30 +21,9 @@ import {
 } from '../services/salesService'
 import type { InventoryLot } from '../types/inventoryLot'
 import type { Product } from '../types/product'
+import { formatDisplayDate, getTodayDateValue } from '../utils/dateOnly'
 import { formatMoneyFromMinor } from '../utils/money'
 
-function getTodayDateValue(): string {
-    const now = new Date()
-
-    const year = now.getFullYear()
-    const month = String(
-        now.getMonth() + 1,
-    ).padStart(2, '0')
-    const day = String(
-        now.getDate(),
-    ).padStart(2, '0')
-
-    return `${year}-${month}-${day}`
-}
-
-function formatDate(
-    value: string,
-): string {
-    const [year, month, day] =
-        value.split('-')
-
-    return `${day}.${month}.${year}`
-}
 
 function MobileDashboardPage() {
     const today = getTodayDateValue()
@@ -103,7 +83,7 @@ function MobileDashboardPage() {
                     (stock.get(
                         lot.productId,
                     ) ?? 0) +
-                    lot.quantityRemaining,
+                        lot.quantityRemaining,
                 )
             }
 
@@ -131,7 +111,7 @@ function MobileDashboardPage() {
                         if (
                             !product.isActive ||
                             product.minimumStock <=
-                            0
+                                0
                         ) {
                             return false
                         }
@@ -176,19 +156,11 @@ function MobileDashboardPage() {
         )
 
     return (
-        <div className="mobile-dashboard-page">
-            <header className="mobile-dashboard-header">
-                <span className="page-eyebrow">
-                    BazaarFlow
-                </span>
-
-                <h1>Genel Bakış</h1>
-
-                <p>
-                    Bugünün satış ve stok durumunu
-                    hızlıca kontrol edin.
-                </p>
-            </header>
+        <div className="mobile-page-shell">
+            <MobilePageHeader
+                title="Genel Bakış"
+                description="Bugünün satış ve stok durumunu hızlıca kontrol edin."
+            />
 
             <section className="mobile-dashboard-summary-grid">
                 <article className="mobile-dashboard-summary-card">
@@ -308,7 +280,7 @@ function MobileDashboardPage() {
                 </div>
 
                 {lowStockProducts.length ===
-                    0 ? (
+                0 ? (
                     <div className="mobile-dashboard-empty">
                         <PackageCheck
                             size={20}
@@ -408,7 +380,7 @@ function MobileDashboardPage() {
                 </div>
 
                 {data.recentSales.length ===
-                    0 ? (
+                0 ? (
                     <div className="mobile-dashboard-empty">
                         <ReceiptText
                             size={20}
@@ -433,12 +405,13 @@ function MobileDashboardPage() {
                                     key={
                                         record.sale.id
                                     }
-                                    className={`mobile-dashboard-sale-row ${record.sale
-                                        .status ===
+                                    className={`mobile-dashboard-sale-row ${
+                                        record.sale
+                                            .status ===
                                         'cancelled'
-                                        ? 'mobile-dashboard-sale-row-cancelled'
-                                        : ''
-                                        }`}
+                                            ? 'mobile-dashboard-sale-row-cancelled'
+                                            : ''
+                                    }`}
                                 >
                                     <div className="mobile-dashboard-sale-main">
                                         <strong>
@@ -455,7 +428,7 @@ function MobileDashboardPage() {
                                         </strong>
 
                                         <span>
-                                            {formatDate(
+                                            {formatDisplayDate(
                                                 record
                                                     .sale
                                                     .saleDate,
@@ -471,7 +444,7 @@ function MobileDashboardPage() {
                                     <div className="mobile-dashboard-sale-value">
                                         {record.sale
                                             .status ===
-                                            'completed' ? (
+                                        'completed' ? (
                                             <>
                                                 <strong>
                                                     {formatMoneyFromMinor(

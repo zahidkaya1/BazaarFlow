@@ -13,6 +13,7 @@ import {
     type ChangeEvent,
 } from 'react'
 
+import MobilePageHeader from '../components/mobile/MobilePageHeader'
 import { backupService } from '../services/backupService'
 import { productService } from '../services/productService'
 import {
@@ -117,23 +118,23 @@ function downloadSalesCsv(
     const rows: Array<
         Array<string | number>
     > = [
-            [
-                'Tarih',
-                'Satış ID',
-                'Ürün',
-                'SKU',
-                'Adet',
-                'Liste Birim Fiyatı',
-                'Satış Birim Fiyatı',
-                'Liste Toplamı',
-                'Ciro',
-                'İndirim',
-                'FIFO Maliyeti',
-                'Brüt Kâr',
-                'İndirim Nedeni',
-                'Satış Notu',
-            ],
-        ]
+        [
+            'Tarih',
+            'Satış ID',
+            'Ürün',
+            'SKU',
+            'Adet',
+            'Liste Birim Fiyatı',
+            'Satış Birim Fiyatı',
+            'Liste Toplamı',
+            'Ciro',
+            'İndirim',
+            'FIFO Maliyeti',
+            'Brüt Kâr',
+            'İndirim Nedeni',
+            'Satış Notu',
+        ],
+    ]
 
     for (const record of history) {
         if (
@@ -153,7 +154,7 @@ function downloadSalesCsv(
                 record.sale.saleDate,
                 record.sale.id,
                 product?.name ??
-                item.productName,
+                    item.productName,
                 product?.sku ?? '',
                 item.quantity,
                 formatCsvMoney(
@@ -164,7 +165,7 @@ function downloadSalesCsv(
                 ),
                 formatCsvMoney(
                     item.listUnitPriceMinor *
-                    item.quantity,
+                        item.quantity,
                 ),
                 formatCsvMoney(
                     item.revenueMinor,
@@ -410,27 +411,20 @@ function MobileSettingsPage() {
     }
 
     return (
-        <div className="mobile-settings-page">
-            <header className="mobile-settings-header">
-                <span className="page-eyebrow">
-                    BazaarFlow
-                </span>
-
-                <h1>Ayarlar</h1>
-
-                <p>
-                    Yedekleme, geri yükleme ve
-                    veri dışa aktarma işlemleri.
-                </p>
-            </header>
+        <div className="mobile-page-shell">
+            <MobilePageHeader
+                title="Ayarlar"
+                description="Yedekleme, geri yükleme ve veri dışa aktarma işlemleri."
+            />
 
             {message && (
                 <div
-                    className={`form-message ${message.type ===
+                    className={`form-message ${
+                        message.type ===
                         'success'
-                        ? 'form-message-success'
-                        : 'form-message-error'
-                        }`}
+                            ? 'form-message-success'
+                            : 'form-message-error'
+                    }`}
                 >
                     {message.text}
                 </div>

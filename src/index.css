@@ -4882,32 +4882,39 @@ textarea:focus-visible {
   }
 }
 
+
 /* =========================================================
-   Mobil Raporlar
+   Ortak mobil sayfa kabuğu
    ========================================================= */
 
 @media (max-width: 768px) {
-  .mobile-reports-page {
+  .mobile-page-shell {
     padding: 14px 12px 96px;
   }
 
-  .mobile-reports-header {
+  .mobile-page-header {
     margin-bottom: 12px;
   }
 
-  .mobile-reports-header h1 {
+  .mobile-page-header h1 {
     margin: 3px 0 0;
     font-size: 22px;
     line-height: 1.15;
   }
 
-  .mobile-reports-header p {
+  .mobile-page-header p {
     margin: 5px 0 0;
     color: var(--color-text-muted);
     font-size: 10px;
     line-height: 1.45;
   }
+}
 
+/* =========================================================
+   Mobil Raporlar
+   ========================================================= */
+
+@media (max-width: 768px) {
   .mobile-reports-periods {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -5171,27 +5178,6 @@ textarea:focus-visible {
    ========================================================= */
 
 @media (max-width: 768px) {
-  .mobile-settings-page {
-    padding: 14px 12px 96px;
-  }
-
-  .mobile-settings-header {
-    margin-bottom: 12px;
-  }
-
-  .mobile-settings-header h1 {
-    margin: 3px 0 0;
-    font-size: 22px;
-    line-height: 1.15;
-  }
-
-  .mobile-settings-header p {
-    margin: 5px 0 0;
-    color: var(--color-text-muted);
-    font-size: 10px;
-    line-height: 1.45;
-  }
-
   .mobile-settings-info-card {
     display: flex;
     align-items: flex-start;
@@ -5432,30 +5418,6 @@ textarea:focus-visible {
    ========================================================= */
 
 @media (max-width: 768px) {
-  .mobile-more-compact-page,
-  .mobile-dashboard-page {
-    padding: 14px 12px 96px;
-  }
-
-  .mobile-more-compact-header,
-  .mobile-dashboard-header {
-    margin-bottom: 12px;
-  }
-
-  .mobile-more-compact-header h1,
-  .mobile-dashboard-header h1 {
-    margin: 3px 0 0;
-    font-size: 22px;
-    line-height: 1.15;
-  }
-
-  .mobile-dashboard-header p {
-    margin: 5px 0 0;
-    color: var(--color-text-muted);
-    font-size: 10px;
-    line-height: 1.45;
-  }
-
   .mobile-more-compact-today {
     margin-top: 4px;
   }

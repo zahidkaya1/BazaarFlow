@@ -11,25 +11,14 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
+import MobilePageHeader from '../components/mobile/MobilePageHeader'
 import {
     salesService,
     type SaleHistorySummary,
 } from '../services/salesService'
+import { getTodayDateValue } from '../utils/dateOnly'
 import { formatMoneyFromMinor } from '../utils/money'
 
-function getTodayDateValue(): string {
-    const now = new Date()
-
-    const year = now.getFullYear()
-    const month = String(
-        now.getMonth() + 1,
-    ).padStart(2, '0')
-    const day = String(
-        now.getDate(),
-    ).padStart(2, '0')
-
-    return `${year}-${month}-${day}`
-}
 
 function MobileMorePage() {
     const today = getTodayDateValue()
@@ -53,14 +42,10 @@ function MobileMorePage() {
     )
 
     return (
-        <div className="mobile-more-compact-page">
-            <header className="mobile-more-compact-header">
-                <span className="page-eyebrow">
-                    BazaarFlow
-                </span>
-
-                <h1>Daha Fazla</h1>
-            </header>
+        <div className="mobile-page-shell">
+            <MobilePageHeader
+                title="Daha Fazla"
+            />
 
             <section className="mobile-more-compact-today">
                 <div className="mobile-more-compact-section-heading">

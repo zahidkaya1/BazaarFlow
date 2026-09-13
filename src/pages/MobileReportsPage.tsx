@@ -7,12 +7,14 @@ import {
     Trophy,
     WalletCards,
 } from 'lucide-react'
+import MobilePageHeader from '../components/mobile/MobilePageHeader'
 import { productService } from '../services/productService'
 import {
     salesService,
     type SaleHistoryRecord,
 } from '../services/salesService'
 import type { Product } from '../types/product'
+import { formatDateValue, formatDisplayDate } from '../utils/dateOnly'
 import { formatMoneyFromMinor } from '../utils/money'
 
 type MobileReportPeriod =
@@ -40,28 +42,6 @@ type DailyReportRow = {
     grossProfitMinor: number
 }
 
-function formatDateValue(
-    date: Date,
-): string {
-    const year = date.getFullYear()
-    const month = String(
-        date.getMonth() + 1,
-    ).padStart(2, '0')
-    const day = String(
-        date.getDate(),
-    ).padStart(2, '0')
-
-    return `${year}-${month}-${day}`
-}
-
-function formatDisplayDate(
-    value: string,
-): string {
-    const [year, month, day] =
-        value.split('-')
-
-    return `${day}.${month}.${year}`
-}
 
 function getRange(
     period: MobileReportPeriod,
@@ -94,7 +74,7 @@ function getRange(
             today.getFullYear(),
             today.getMonth(),
             today.getDate() +
-            mondayOffset,
+                mondayOffset,
         )
 
         const sunday = new Date(
@@ -273,11 +253,11 @@ function MobileReportsPage() {
 
             for (
                 const record of
-                completedRecords
+                    completedRecords
             ) {
                 for (
                     const item of
-                    record.items
+                        record.items
                 ) {
                     const product =
                         productMap.get(
@@ -346,9 +326,9 @@ function MobileReportsPage() {
                             second,
                         ) =>
                             second.quantity -
-                            first.quantity ||
+                                first.quantity ||
                             second.revenueMinor -
-                            first.revenueMinor,
+                                first.revenueMinor,
                     )[0] ?? null,
             [productPerformance],
         )
@@ -363,9 +343,9 @@ function MobileReportsPage() {
                             second,
                         ) =>
                             second.grossProfitMinor -
-                            first.grossProfitMinor ||
+                                first.grossProfitMinor ||
                             second.quantity -
-                            first.quantity,
+                                first.quantity,
                     )[0] ?? null,
             [productPerformance],
         )
@@ -380,7 +360,7 @@ function MobileReportsPage() {
 
             for (
                 const record of
-                completedRecords
+                    completedRecords
             ) {
                 const saleDate =
                     record.sale.saleDate
@@ -438,34 +418,26 @@ function MobileReportsPage() {
     const grossMargin =
         summary.revenueMinor > 0
             ? (
-                (summary.grossProfitMinor /
-                    summary.revenueMinor) *
-                100
-            ).toLocaleString(
-                'tr-TR',
-                {
-                    minimumFractionDigits:
-                        1,
-                    maximumFractionDigits:
-                        1,
-                },
-            )
+                  (summary.grossProfitMinor /
+                      summary.revenueMinor) *
+                  100
+              ).toLocaleString(
+                  'tr-TR',
+                  {
+                      minimumFractionDigits:
+                          1,
+                      maximumFractionDigits:
+                          1,
+                  },
+              )
             : '0,0'
 
     return (
-        <div className="mobile-reports-page">
-            <header className="mobile-reports-header">
-                <span className="page-eyebrow">
-                    BazaarFlow
-                </span>
-
-                <h1>Raporlar</h1>
-
-                <p>
-                    Satış ve kârlılığı hızlıca
-                    takip edin.
-                </p>
-            </header>
+        <div className="mobile-page-shell">
+            <MobilePageHeader
+                title="Raporlar"
+                description="Satış ve kârlılığı hızlıca takip edin."
+            />
 
             <div
                 className="mobile-reports-periods"
@@ -484,7 +456,7 @@ function MobileReportsPage() {
                         type="button"
                         className={
                             period ===
-                                item
+                            item
                                 ? 'mobile-reports-period mobile-reports-period-active'
                                 : 'mobile-reports-period'
                         }
@@ -591,7 +563,7 @@ function MobileReportsPage() {
             </div>
 
             {completedRecords.length ===
-                0 ? (
+            0 ? (
                 <section className="mobile-reports-empty">
                     <strong>
                         Bu dönemde satış yok
@@ -631,7 +603,7 @@ function MobileReportsPage() {
                                     adet ·{' '}
                                     {formatMoneyFromMinor(
                                         bestSeller?.revenueMinor ??
-                                        0,
+                                            0,
                                     )}
                                 </span>
                             </div>
@@ -658,7 +630,7 @@ function MobileReportsPage() {
                                 <span>
                                     {formatMoneyFromMinor(
                                         mostProfitable?.grossProfitMinor ??
-                                        0,
+                                            0,
                                     )}{' '}
                                     brüt kâr
                                 </span>
