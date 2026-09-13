@@ -828,13 +828,6 @@ textarea:focus-visible {
   font-size: 13px;
 }
 
-.stock-quantity {
-  color: var(--color-secondary);
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
 .stock-product-passive {
   display: inline-flex;
 
@@ -1282,60 +1275,6 @@ textarea:focus-visible {
   color: var(--color-text-muted);
 
   font-size: 13px;
-}
-
-.history-date-filter {
-  min-width: 210px;
-
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.history-date-filter>span {
-  color: var(--color-text);
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.history-date-input {
-  min-height: 42px;
-
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  padding: 0 11px;
-
-  border: 1px solid var(--color-border);
-  border-radius: 9px;
-
-  background: var(--color-surface);
-  color: var(--color-text-muted);
-}
-
-.history-date-input input {
-  width: 100%;
-
-  border: 0;
-  outline: 0;
-
-  background: transparent;
-  color: var(--color-text);
-}
-
-.history-clear-button {
-  padding: 0;
-
-  border: 0;
-
-  background: transparent;
-  color: var(--color-secondary);
-
-  font-size: 10px;
-  font-weight: 600;
-
-  text-align: left;
 }
 
 .history-summary-grid {
@@ -2184,39 +2123,6 @@ textarea:focus-visible {
   fill: var(--color-text-muted);
 }
 
-.reports-chart-legend {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-
-  padding-top: 8px;
-
-  font-size: 13px;
-  color: var(--color-text-muted);
-}
-
-.reports-chart-legend>span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.reports-chart-legend-mark {
-  width: 11px;
-  height: 11px;
-
-  border-radius: 3px;
-}
-
-.reports-chart-legend-revenue {
-  background: var(--color-secondary);
-}
-
-.reports-chart-legend-profit {
-  background: var(--color-primary);
-}
-
 /* ===== 10. STOK DÜZELTMELERİ ===== */
 
 .inventory-adjustment-layout {
@@ -2285,10 +2191,6 @@ textarea:focus-visible {
 
 .adjustment-quantity-negative {
   color: #b91c1c;
-}
-
-.adjustment-table {
-  min-width: 760px;
 }
 
 /* ----- Düzeltme geri bildirimi ve geçmişi ----- */
@@ -2893,10 +2795,6 @@ textarea:focus-visible {
     flex-direction: column;
   }
 
-  .history-date-filter {
-    width: 100%;
-  }
-
   .sale-history-card-header,
   .sale-history-item {
     align-items: flex-start;
@@ -2979,11 +2877,6 @@ textarea:focus-visible {
 
   .settings-restore-actions button {
     width: 100%;
-  }
-
-  .reports-chart-legend {
-    flex-wrap: wrap;
-    gap: 10px 16px;
   }
 
   /* Hızlı Satış mobil POS optimizasyonu */
@@ -3522,23 +3415,6 @@ textarea:focus-visible {
   gap: 7px;
 }
 
-.quick-sale-special-price-badge {
-  display: inline-flex;
-  padding: 3px 6px;
-  border-radius: 999px;
-  background: #fff7ed;
-  color: #c2410c !important;
-  font-size: 9px !important;
-  font-weight: 800;
-}
-
-.quick-sale-discount-reason {
-  margin: -2px 0 10px;
-  color: var(--color-text-soft);
-  font-size: 9px;
-  line-height: 1.4;
-}
-
 .quick-sale-discount-total {
   display: flex;
   align-items: center;
@@ -3610,140 +3486,6 @@ textarea:focus-visible {
   color: var(--color-text-muted);
 }
 
-.quick-sale-discount-content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 18px 20px;
-}
-
-.quick-sale-discount-products {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.quick-sale-discount-products button {
-  min-width: 0;
-  min-height: 54px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 3px;
-  padding: 9px 11px;
-  border: 1px solid var(--color-border);
-  border-radius: 9px;
-  background: var(--color-background);
-  color: var(--color-text);
-  text-align: left;
-}
-
-.quick-sale-discount-products button strong {
-  width: 100%;
-  overflow: hidden;
-  font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.quick-sale-discount-products button span {
-  color: var(--color-text-muted);
-  font-size: 9px;
-}
-
-.quick-sale-discount-products .quick-sale-discount-product-active {
-  border-color: var(--color-secondary);
-  background: var(--color-primary-soft);
-  color: var(--color-secondary);
-}
-
-.quick-sale-list-price {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 11px 12px;
-  border-radius: 9px;
-  background: var(--color-primary-soft);
-}
-
-.quick-sale-list-price span {
-  color: var(--color-text-muted);
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.quick-sale-list-price strong {
-  color: var(--color-secondary);
-  font-size: 13px;
-}
-
-.quick-sale-discount-field {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.quick-sale-discount-field>span {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  color: var(--color-text);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.quick-sale-discount-field small {
-  color: var(--color-text-soft);
-  font-size: 9px;
-  font-weight: 500;
-}
-
-.quick-sale-discount-field input {
-  width: 100%;
-  min-height: 46px;
-  padding: 0 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 9px;
-  outline: 0;
-  background: #ffffff;
-  color: var(--color-text);
-}
-
-.quick-sale-discount-field input:focus {
-  border-color: var(--color-secondary);
-  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.09);
-}
-
-.quick-sale-discount-actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
-  gap: 9px;
-  padding: 0 20px 20px;
-}
-
-.quick-sale-reset-price-button,
-.quick-sale-save-price-button {
-  min-height: 48px;
-  border-radius: 9px;
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.quick-sale-reset-price-button {
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text-muted);
-}
-
-.quick-sale-save-price-button {
-  border: 0;
-  background: var(--color-secondary);
-  color: #ffffff;
-}
-
 @media (max-width: 600px) {
   .quick-sale-modal-backdrop {
     align-items: end;
@@ -3760,66 +3502,12 @@ textarea:focus-visible {
     border-radius: 18px 18px 0 0;
   }
 
-  .quick-sale-discount-header,
-  .quick-sale-discount-content {
+  .quick-sale-discount-header {
     padding: 16px;
   }
-
-  .quick-sale-discount-products {
-    grid-template-columns: 1fr;
-  }
-
-  .quick-sale-discount-actions {
-    position: sticky;
-    bottom: 0;
-    grid-template-columns: 1fr;
-    padding: 10px 16px 16px;
-    border-top: 1px solid var(--color-border);
-    background: var(--color-surface);
-  }
-
-  .quick-sale-save-price-button {
-    min-height: 54px;
-    order: -1;
-    font-size: 13px;
-  }
-}
-
-/* ===== MOBİL HIZLI İNDİRİM ===== */
-
-.quick-sale-mobile-discount-button,
-.quick-sale-discount-mobile {
-  display: none;
 }
 
 @media (max-width: 768px) {
-
-  .quick-sale-desktop-discount-button,
-  .quick-sale-discount-desktop {
-    display: none;
-  }
-
-  .quick-sale-mobile-discount-button {
-    width: 100%;
-    min-height: 38px;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-
-    margin: 0 0 10px;
-    padding: 0 12px;
-
-    border: 1px solid #fed7aa;
-    border-radius: 9px;
-
-    background: #fff7ed;
-    color: #c2410c;
-
-    font-size: 11px;
-    font-weight: 750;
-  }
 
   .quick-sale-modal-backdrop {
     align-items: end;
@@ -3848,139 +3536,6 @@ textarea:focus-visible {
 
   .quick-sale-discount-header h2 {
     font-size: 17px;
-  }
-
-  .quick-sale-discount-mobile {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-
-    padding: 16px;
-  }
-
-  .quick-sale-mobile-discount-product {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-
-    padding-bottom: 12px;
-
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  .quick-sale-mobile-discount-product span,
-  .quick-sale-mobile-discount-price-row span,
-  .quick-sale-mobile-discount-preview span {
-    color: var(--color-text-muted);
-
-    font-size: 10px;
-    font-weight: 650;
-  }
-
-  .quick-sale-mobile-discount-product strong {
-    color: var(--color-text);
-
-    font-size: 17px;
-  }
-
-  .quick-sale-mobile-discount-price-row,
-  .quick-sale-mobile-discount-preview {
-    min-height: 48px;
-
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-
-    padding: 0 13px;
-
-    border-radius: 10px;
-
-    background: var(--color-background);
-  }
-
-  .quick-sale-mobile-discount-price-row strong {
-    color: var(--color-text);
-
-    font-size: 14px;
-  }
-
-  .quick-sale-mobile-discount-presets {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .quick-sale-mobile-discount-presets button {
-    min-width: 0;
-    min-height: 58px;
-
-    border: 1px solid var(--color-border);
-    border-radius: 11px;
-
-    background: var(--color-surface);
-    color: var(--color-text);
-
-    font-size: 13px;
-    font-weight: 800;
-  }
-
-  .quick-sale-mobile-discount-presets button:disabled {
-    cursor: not-allowed;
-    opacity: 0.35;
-  }
-
-  .quick-sale-mobile-discount-presets .quick-sale-mobile-discount-preset-active {
-    border-color: var(--color-secondary);
-
-    background: var(--color-primary-soft);
-    color: var(--color-secondary);
-
-    box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.08);
-  }
-
-  .quick-sale-mobile-discount-remove {
-    min-height: 38px;
-
-    border: 0;
-
-    background: transparent;
-    color: #b91c1c;
-
-    font-size: 10px;
-    font-weight: 700;
-  }
-
-  .quick-sale-mobile-discount-remove:disabled {
-    cursor: default;
-    color: var(--color-text-soft);
-    opacity: 0.55;
-  }
-
-  .quick-sale-mobile-discount-preview {
-    min-height: 58px;
-
-    background: var(--color-primary-soft);
-  }
-
-  .quick-sale-mobile-discount-preview strong {
-    color: var(--color-secondary);
-
-    font-size: 22px;
-    letter-spacing: -0.4px;
-  }
-
-  .quick-sale-mobile-discount-confirm {
-    min-height: 56px;
-
-    border: 0;
-    border-radius: 11px;
-
-    background: var(--color-secondary);
-    color: #ffffff;
-
-    font-size: 14px;
-    font-weight: 850;
   }
 }
 
