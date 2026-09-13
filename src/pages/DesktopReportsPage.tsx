@@ -32,6 +32,11 @@ import {
 } from '../services/salesService'
 import type { InventoryLot } from '../types/inventoryLot'
 import type { Product } from '../types/product'
+import {
+    formatDateValue,
+    formatDisplayDate,
+    getTodayDateValue,
+} from '../utils/dateOnly'
 import { formatMoneyFromMinor } from '../utils/money'
 
 type ReportPeriod =
@@ -90,19 +95,7 @@ type ChartTooltipProps = {
     payload?: readonly ChartTooltipPayloadEntry[]
 }
 
-function formatDateValue(date: Date): string {
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
 
-    return `${year}-${month}-${day}`
-}
-
-function formatDisplayDate(value: string): string {
-    const [year, month, day] = value.split('-')
-
-    return `${day}.${month}.${year}`
-}
 
 function formatShortDisplayDate(
     value: string,
@@ -828,9 +821,6 @@ function createYearlyMonthTrendData(
     )
 }
 
-function getTodayDateValue(): string {
-    return formatDateValue(new Date())
-}
 
 function getWeekRange(): {
     start: string

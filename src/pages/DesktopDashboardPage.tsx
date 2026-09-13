@@ -22,23 +22,13 @@ import {
 } from '../services/salesService'
 import type { InventoryLot } from '../types/inventoryLot'
 import type { Product } from '../types/product'
+import {
+    formatDisplayDate,
+    getTodayDateValue,
+} from '../utils/dateOnly'
 import { formatMoneyFromMinor } from '../utils/money'
 
-function getTodayDateValue(): string {
-    const now = new Date()
 
-    const year = now.getFullYear()
-    const month = String(now.getMonth() + 1).padStart(2, '0')
-    const day = String(now.getDate()).padStart(2, '0')
-
-    return `${year}-${month}-${day}`
-}
-
-function formatDate(value: string): string {
-    const [year, month, day] = value.split('-')
-
-    return `${day}.${month}.${year}`
-}
 
 function DesktopDashboardPage() {
     const today = getTodayDateValue()
@@ -402,7 +392,7 @@ function DesktopDashboardPage() {
                                         </div>
 
                                         <span className="dashboard-sale-meta">
-                                            {formatDate(
+                                            {formatDisplayDate(
                                                 record.sale.saleDate,
                                             )}{' '}
                                             • {record.totalQuantity} adet

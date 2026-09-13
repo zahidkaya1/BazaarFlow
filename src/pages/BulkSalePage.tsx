@@ -15,6 +15,10 @@ import {
     salesService,
 } from '../services/salesService'
 import type { Product } from '../types/product'
+import {
+    formatDisplayDate,
+    getTodayDateValue,
+} from '../utils/dateOnly'
 import { formatMoneyFromMinor } from '../utils/money'
 import { getSaleRoundingTargets } from '../utils/saleRounding'
 
@@ -25,22 +29,8 @@ type BulkSaleItem = {
     unitPriceMinor: number
 }
 
-function getTodayDateValue(): string {
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = String(now.getMonth() + 1).padStart(2, '0')
-    const day = String(now.getDate()).padStart(2, '0')
-
-    return `${year}-${month}-${day}`
-}
 
 
-function formatDate(value: string): string {
-    const [year, month, day] =
-        value.split('-')
-
-    return `${day}.${month}.${year}`
-}
 
 function BulkSalePage() {
     const [saleDate, setSaleDate] = useState(
@@ -226,7 +216,7 @@ function BulkSalePage() {
                     )
 
                 throw new Error(
-                    `${selectedProduct.name} için ${formatDate(
+                    `${selectedProduct.name} için ${formatDisplayDate(
                         saleDate,
                     )} tarihinde en fazla ${remainingCapacity} adet daha eklenebilir.`,
                 )
@@ -307,7 +297,7 @@ function BulkSalePage() {
                 )
 
             setError(
-                `${product?.name ?? 'Ürün'} için ${formatDate(
+                `${product?.name ?? 'Ürün'} için ${formatDisplayDate(
                     saleDate,
                 )} tarihinde en fazla ${dateCapacity} adet eklenebilir.`,
             )
@@ -383,7 +373,7 @@ function BulkSalePage() {
                     ] ?? 0
 
                 throw new Error(
-                    `${invalidItem.productName} için ${formatDate(
+                    `${invalidItem.productName} için ${formatDisplayDate(
                         saleDate,
                     )} tarihinde en fazla ${dateCapacity} adet eklenebilir.`,
                 )
@@ -655,7 +645,7 @@ function BulkSalePage() {
                                     </span>
 
                                     <span>
-                                        {formatDate(saleDate)} tarihinde
+                                        {formatDisplayDate(saleDate)} tarihinde
                                         eklenebilir stok:{' '}
                                         <strong>
                                             {selectedProductRemainingCapacity ===
