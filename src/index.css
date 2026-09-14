@@ -2655,7 +2655,7 @@ textarea:focus-visible {
 
     color: var(--color-text-muted);
 
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
 
     text-decoration: none;
@@ -3410,7 +3410,7 @@ textarea:focus-visible {
   display: block;
   margin-bottom: 4px;
   color: var(--color-secondary);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.6px;
   text-transform: uppercase;
@@ -3652,7 +3652,7 @@ textarea:focus-visible {
   .mobile-stock-current span {
     color: var(--color-text-muted);
 
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 650;
   }
 
@@ -3697,7 +3697,7 @@ textarea:focus-visible {
 
     color: var(--color-text-soft);
 
-    font-size: 9px;
+    font-size: 10px;
     line-height: 1.5;
     text-align: center;
   }
@@ -3765,7 +3765,7 @@ textarea:focus-visible {
   .mobile-products-toolbar span {
     color: var(--color-text-muted);
 
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .mobile-product-add-button {
@@ -3824,7 +3824,7 @@ textarea:focus-visible {
 
     color: var(--color-text-muted);
 
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
   }
 
@@ -4030,7 +4030,7 @@ textarea:focus-visible {
   .mobile-product-title>div>span {
     color: var(--color-text-muted);
 
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .mobile-product-title .status-badge {
@@ -4072,7 +4072,7 @@ textarea:focus-visible {
   .mobile-product-card-meta span {
     color: var(--color-text-muted);
 
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 650;
   }
 
@@ -4149,7 +4149,7 @@ textarea:focus-visible {
   }
 
   .mobile-products-empty span {
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .products-page>.form-message {
@@ -4235,7 +4235,7 @@ textarea:focus-visible {
 .quick-sale-rounding-options button>span {
   color: var(--color-text-muted);
 
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 700;
 }
 
@@ -4249,7 +4249,7 @@ textarea:focus-visible {
 .quick-sale-rounding-options button>small {
   color: #b45309;
 
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 750;
 }
 
@@ -4453,7 +4453,7 @@ textarea:focus-visible {
 
     color: var(--color-text-muted);
 
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
   }
 
@@ -4528,7 +4528,7 @@ textarea:focus-visible {
 
     color: var(--color-text-muted);
 
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .mobile-sale-card-money {
@@ -4552,7 +4552,7 @@ textarea:focus-visible {
 
     color: var(--color-text-muted);
 
-    font-size: 8px;
+    font-size: 10px;
   }
 
   .mobile-sale-card-preview {
@@ -4571,7 +4571,7 @@ textarea:focus-visible {
     background: var(--color-primary-soft);
     color: var(--color-text-muted);
 
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 700;
   }
 
@@ -4608,7 +4608,7 @@ textarea:focus-visible {
 
     color: var(--color-text-muted);
 
-    font-size: 8px;
+    font-size: 10px;
   }
 
   .mobile-sale-detail-metrics strong {
@@ -4664,7 +4664,7 @@ textarea:focus-visible {
 
     color: var(--color-text-muted);
 
-    font-size: 8px;
+    font-size: 10px;
   }
 
   .mobile-sale-note {
@@ -4677,7 +4677,7 @@ textarea:focus-visible {
 
     color: var(--color-text-muted);
 
-    font-size: 9px;
+    font-size: 10px;
     line-height: 1.45;
   }
 
@@ -4720,7 +4720,7 @@ textarea:focus-visible {
   }
 
   .mobile-sales-empty span {
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .mobile-sales-editor {
@@ -4754,7 +4754,7 @@ textarea:focus-visible {
 
     color: var(--color-text-muted);
 
-    font-size: 9px;
+    font-size: 10px;
     line-height: 1.45;
   }
 
@@ -4816,7 +4816,7 @@ textarea:focus-visible {
 
     color: #b45309;
 
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .mobile-sales-remove-row {
@@ -4837,7 +4837,7 @@ textarea:focus-visible {
     color: #b91c1c;
 
     font: inherit;
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
   }
 
@@ -4864,7 +4864,7 @@ textarea:focus-visible {
 
     color: var(--color-text-muted);
 
-    font-size: 8px;
+    font-size: 10px;
   }
 
   .mobile-sales-editor-summary strong {
@@ -4943,7 +4943,7 @@ textarea:focus-visible {
   .mobile-reports-range {
     margin: 8px 2px 12px;
     color: var(--color-text-muted);
-    font-size: 9px;
+    font-size: 10px;
     text-align: right;
   }
 
@@ -4966,7 +4966,7 @@ textarea:focus-visible {
     display: block;
     margin-top: 8px;
     color: var(--color-text-muted);
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 600;
   }
 
@@ -5003,7 +5003,7 @@ textarea:focus-visible {
     gap: 8px;
     margin: 9px 2px 14px;
     color: var(--color-text-muted);
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .mobile-reports-highlights {
@@ -5044,7 +5044,7 @@ textarea:focus-visible {
     display: block;
     margin-bottom: 2px;
     color: var(--color-text-muted);
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -5063,7 +5063,7 @@ textarea:focus-visible {
     display: block;
     margin-top: 3px;
     color: var(--color-text-muted);
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .mobile-reports-days {
@@ -5089,7 +5089,7 @@ textarea:focus-visible {
     display: block;
     margin-top: 2px;
     color: var(--color-text-muted);
-    font-size: 8px;
+    font-size: 10px;
   }
 
   .mobile-reports-day-list {
@@ -5127,7 +5127,7 @@ textarea:focus-visible {
     display: block;
     margin-top: 3px;
     color: var(--color-text-muted);
-    font-size: 8px;
+    font-size: 10px;
   }
 
   .mobile-reports-day-money {
@@ -5145,7 +5145,7 @@ textarea:focus-visible {
     display: block;
     margin-top: 3px;
     color: var(--color-primary-dark);
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 700;
   }
 
@@ -5169,7 +5169,7 @@ textarea:focus-visible {
   }
 
   .mobile-reports-empty span {
-    font-size: 9px;
+    font-size: 10px;
   }
 }
 
@@ -5217,7 +5217,7 @@ textarea:focus-visible {
     display: block;
     margin-top: 3px;
     color: var(--color-text-muted);
-    font-size: 9px;
+    font-size: 10px;
     line-height: 1.45;
   }
 
@@ -5283,7 +5283,7 @@ textarea:focus-visible {
     display: block;
     margin-top: 3px;
     color: var(--color-text-muted);
-    font-size: 8px;
+    font-size: 10px;
     line-height: 1.4;
   }
 
@@ -5315,7 +5315,7 @@ textarea:focus-visible {
     display: block;
     margin-top: 2px;
     color: var(--color-text-muted);
-    font-size: 8px;
+    font-size: 10px;
   }
 
   .mobile-settings-preview-meta {
@@ -5336,7 +5336,7 @@ textarea:focus-visible {
   .mobile-settings-count-grid span {
     display: block;
     color: var(--color-text-muted);
-    font-size: 8px;
+    font-size: 10px;
   }
 
   .mobile-settings-preview-meta strong {
@@ -5344,7 +5344,7 @@ textarea:focus-visible {
     overflow: hidden;
     margin-top: 2px;
     color: var(--color-text);
-    font-size: 9px;
+    font-size: 10px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -5409,7 +5409,7 @@ textarea:focus-visible {
     display: block;
     margin-top: 3px;
     color: var(--color-text-muted);
-    font-size: 8px;
+    font-size: 10px;
   }
 }
 
@@ -5439,7 +5439,7 @@ textarea:focus-visible {
   .mobile-more-compact-section-heading span {
     display: block;
     color: var(--color-text-muted);
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 800;
     letter-spacing: 0.05em;
   }
@@ -5456,7 +5456,7 @@ textarea:focus-visible {
     display: block;
     margin-top: 2px;
     color: var(--color-text-muted);
-    font-size: 8px;
+    font-size: 10px;
   }
 
   .mobile-more-compact-inline-link,
@@ -5466,7 +5466,7 @@ textarea:focus-visible {
     gap: 2px;
     flex-shrink: 0;
     color: var(--color-primary-dark);
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
     text-decoration: none;
   }
@@ -5515,7 +5515,7 @@ textarea:focus-visible {
   .mobile-dashboard-summary-card > span:not(.mobile-dashboard-summary-icon) {
     display: block;
     color: var(--color-text-muted);
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 600;
   }
 
@@ -5547,7 +5547,7 @@ textarea:focus-visible {
     display: block;
     margin: 0 2px 7px;
     color: var(--color-text-muted);
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 800;
     letter-spacing: 0.05em;
   }
@@ -5603,7 +5603,7 @@ textarea:focus-visible {
     display: block;
     margin-top: 2px;
     color: var(--color-text-muted);
-    font-size: 8px;
+    font-size: 10px;
   }
 
   .mobile-more-compact-menu-item > svg {
@@ -5631,7 +5631,7 @@ textarea:focus-visible {
     align-items: center;
     gap: 4px;
     color: var(--color-text-muted);
-    font-size: 7px;
+    font-size: 9px;
     line-height: 1.25;
   }
 
@@ -5674,7 +5674,7 @@ textarea:focus-visible {
     display: block;
     margin-top: 2px;
     color: var(--color-text-muted);
-    font-size: 8px;
+    font-size: 10px;
   }
 
   .mobile-dashboard-low-stock-row,
@@ -5724,7 +5724,7 @@ textarea:focus-visible {
     display: block;
     margin-top: 2px;
     color: var(--color-text-muted);
-    font-size: 8px;
+    font-size: 10px;
   }
 
   .mobile-dashboard-low-stock-value {
@@ -5742,7 +5742,7 @@ textarea:focus-visible {
     display: block;
     margin-top: 1px;
     color: var(--color-text-muted);
-    font-size: 7px;
+    font-size: 9px;
   }
 
   .mobile-dashboard-sale-row {
@@ -5770,7 +5770,7 @@ textarea:focus-visible {
     display: block;
     margin-top: 2px;
     color: var(--color-primary-dark);
-    font-size: 7px;
+    font-size: 9px;
     font-weight: 700;
   }
 

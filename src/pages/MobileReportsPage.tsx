@@ -508,7 +508,7 @@ function MobileReportsPage() {
                         />
                     </span>
 
-                    <span>Maliyet</span>
+                    <span>FIFO Maliyeti</span>
 
                     <strong>
                         {formatMoneyFromMinor(

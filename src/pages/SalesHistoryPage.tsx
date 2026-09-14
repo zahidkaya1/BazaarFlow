@@ -2035,7 +2035,7 @@ function SalesHistoryPage() {
                     </article>
 
                     <article>
-                        <span>Maliyet</span>
+                        <span>FIFO Maliyeti</span>
                         <strong>
                             {formatMoneyFromMinor(
                                 historyCostMinor,
@@ -2142,7 +2142,7 @@ function SalesHistoryPage() {
                                                 </strong>
 
                                                 <span>
-                                                    Kâr{' '}
+                                                    Brüt Kâr{' '}
                                                     {formatMoneyFromMinor(
                                                         record.grossProfitMinor,
                                                     )}
@@ -2213,7 +2213,7 @@ function SalesHistoryPage() {
 
                                                     <span>
                                                         <small>
-                                                            Maliyet
+                                                            FIFO Maliyeti
                                                         </small>
                                                         <strong>
                                                             {formatMoneyFromMinor(
@@ -2224,7 +2224,7 @@ function SalesHistoryPage() {
 
                                                     <span>
                                                         <small>
-                                                            Kâr
+                                                            Brüt Kâr
                                                         </small>
                                                         <strong>
                                                             {formatMoneyFromMinor(
