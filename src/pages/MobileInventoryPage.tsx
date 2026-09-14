@@ -49,6 +49,11 @@ function MobileInventoryPage() {
     const [error, setError] =
         useState('')
 
+    const [
+        isSaving,
+        setIsSaving,
+    ] = useState(false)
+
     const activeProducts = useMemo(
         () =>
             products.filter(
@@ -98,8 +103,13 @@ function MobileInventoryPage() {
     ) {
         event.preventDefault()
 
+        if (isSaving) {
+            return
+        }
+
         setMessage('')
         setError('')
+        setIsSaving(true)
 
         try {
             if (!productId) {
@@ -150,6 +160,8 @@ function MobileInventoryPage() {
                     ? caughtError.message
                     : 'Stok girişi kaydedilemedi.',
             )
+        } finally {
+            setIsSaving(false)
         }
     }
 
@@ -334,6 +346,7 @@ function MobileInventoryPage() {
                             type="submit"
                             className="mobile-stock-submit"
                             disabled={
+                                isSaving ||
                                 !productId ||
                                 !quantityReceived ||
                                 !unitCost
@@ -342,7 +355,9 @@ function MobileInventoryPage() {
                             <PackagePlus
                                 size={19}
                             />
-                            STOKA EKLE
+                            {isSaving
+                                ? 'KAYDEDİLİYOR...'
+                                : 'STOKA EKLE'}
                         </button>
                     </form>
                 </article>

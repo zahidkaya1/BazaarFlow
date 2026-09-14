@@ -10,6 +10,7 @@ import {
     useState,
 } from 'react'
 
+import ConfirmDialog from '../components/ui/ConfirmDialog'
 import { backupService } from '../services/backupService'
 import type { BazaarFlowBackup } from '../types/backup'
 
@@ -79,6 +80,11 @@ function DesktopSettingsPage() {
     ] = useState<PendingBackup | null>(
         null,
     )
+
+    const [
+        isRestoreConfirmOpen,
+        setIsRestoreConfirmOpen,
+    ] = useState(false)
 
     const isBusy =
         actionState !== 'idle'
@@ -158,6 +164,17 @@ function DesktopSettingsPage() {
         }
     }
 
+    function requestRestoreBackup() {
+        if (
+            !pendingBackup ||
+            isBusy
+        ) {
+            return
+        }
+
+        setIsRestoreConfirmOpen(true)
+    }
+
     async function handleRestoreBackup() {
         if (
             !pendingBackup ||
@@ -166,20 +183,7 @@ function DesktopSettingsPage() {
             return
         }
 
-        const confirmed =
-            window.confirm(
-                [
-                    'Bu işlem mevcut BazaarFlow verilerinin tamamını seçilen yedekle değiştirecek.',
-                    '',
-                    'Ürünler, stoklar, satışlar ve stok düzeltmeleri geri yüklenecek.',
-                    '',
-                    'Devam etmek istediğinize emin misiniz?',
-                ].join('\n'),
-            )
-
-        if (!confirmed) {
-            return
-        }
+        setIsRestoreConfirmOpen(false)
 
         try {
             setActionState('restoring')
@@ -531,7 +535,7 @@ function DesktopSettingsPage() {
                                 className="primary-button settings-restore-button"
                                 disabled={isBusy}
                                 onClick={
-                                    handleRestoreBackup
+                                    requestRestoreBackup
                                 }
                             >
                                 <Upload size={16} />
@@ -544,6 +548,20 @@ function DesktopSettingsPage() {
                         </div>
                     </article>
                 )}
+
+            <ConfirmDialog
+                open={isRestoreConfirmOpen}
+                title="Yedeği Geri Yükle"
+                description="Bu işlem mevcut BazaarFlow verilerinin tamamını seçilen yedekle değiştirecek. Ürünler, stoklar, satışlar ve stok düzeltmeleri yedekteki durumla değiştirilecek."
+                confirmLabel="Yedeği Geri Yükle"
+                pendingLabel="Geri yükleniyor..."
+                tone="warning"
+                isConfirming={actionState === 'restoring'}
+                onCancel={() =>
+                    setIsRestoreConfirmOpen(false)
+                }
+                onConfirm={handleRestoreBackup}
+            />
         </section>
     )
 }

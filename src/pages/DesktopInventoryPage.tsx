@@ -181,6 +181,16 @@ function DesktopInventoryPage() {
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
 
+    const [
+        isSavingStock,
+        setIsSavingStock,
+    ] = useState(false)
+
+    const [
+        isSavingAdjustment,
+        setIsSavingAdjustment,
+    ] = useState(false)
+
     const activeProducts = useMemo(
         () =>
             products.filter(
@@ -423,8 +433,13 @@ function DesktopInventoryPage() {
     ) {
         event.preventDefault()
 
+        if (isSavingStock) {
+            return
+        }
+
         setMessage('')
         setError('')
+        setIsSavingStock(true)
 
         try {
             const quantity = Number(
@@ -467,6 +482,8 @@ function DesktopInventoryPage() {
                     ? caughtError.message
                     : 'Stok girişi kaydedilemedi.',
             )
+        } finally {
+            setIsSavingStock(false)
         }
     }
 
@@ -475,8 +492,13 @@ function DesktopInventoryPage() {
     ) {
         event.preventDefault()
 
+        if (isSavingAdjustment) {
+            return
+        }
+
         setAdjustmentMessage('')
         setAdjustmentError('')
+        setIsSavingAdjustment(true)
 
         try {
             const quantity = Number(
@@ -532,6 +554,8 @@ function DesktopInventoryPage() {
                     ? caughtError.message
                     : 'Stok düzeltmesi kaydedilemedi.',
             )
+        } finally {
+            setIsSavingAdjustment(false)
         }
     }
 
@@ -824,12 +848,15 @@ function DesktopInventoryPage() {
                             <button
                                 className="primary-button"
                                 type="submit"
+                                disabled={isSavingStock}
                             >
                                 <PackagePlus size={18} />
 
-                                {entryType === 'opening'
-                                    ? 'Açılış Stoku Ekle'
-                                    : 'Stok Alımı Ekle'}
+                                {isSavingStock
+                                    ? 'Kaydediliyor...'
+                                    : entryType === 'opening'
+                                        ? 'Açılış Stoku Ekle'
+                                        : 'Stok Alımı Ekle'}
                             </button>
                         </form>
                     </article>
@@ -1230,6 +1257,7 @@ function DesktopInventoryPage() {
                             <button
                                 className="primary-button"
                                 type="submit"
+                                disabled={isSavingAdjustment}
                             >
                                 {adjustmentDirection ===
                                     'increase' ? (
@@ -1238,10 +1266,12 @@ function DesktopInventoryPage() {
                                     <Minus size={18} />
                                 )}
 
-                                {adjustmentDirection ===
-                                    'increase'
-                                    ? 'Stok Artışını Kaydet'
-                                    : 'Stok Azalışını Kaydet'}
+                                {isSavingAdjustment
+                                    ? 'Kaydediliyor...'
+                                    : adjustmentDirection ===
+                                        'increase'
+                                        ? 'Stok Artışını Kaydet'
+                                        : 'Stok Azalışını Kaydet'}
                             </button>
                         </form>
                     </article>

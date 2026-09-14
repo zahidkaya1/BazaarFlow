@@ -12,6 +12,7 @@ import {
     Trash2,
     X,
 } from 'lucide-react'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
 import { productService } from '../services/productService'
 import {
     getSaleItemDiscountMinor,
@@ -186,6 +187,23 @@ function SalesHistoryPage() {
 
     const [error, setError] =
         useState('')
+
+    const [
+        isSavingEditedSale,
+        setIsSavingEditedSale,
+    ] = useState(false)
+
+    const [
+        pendingCancelSale,
+        setPendingCancelSale,
+    ] = useState<SaleHistoryRecord | null>(
+        null,
+    )
+
+    const [
+        isCancellingSale,
+        setIsCancellingSale,
+    ] = useState(false)
 
     const [
         expandedMobileSaleId,
@@ -694,7 +712,12 @@ function SalesHistoryPage() {
     }
 
     async function handleSaveEditedSale() {
+        if (isSavingEditedSale) {
+            return
+        }
+
         clearFeedback()
+        setIsSavingEditedSale(true)
 
         try {
             if (!editingSaleId) {
@@ -783,32 +806,38 @@ function SalesHistoryPage() {
                     ? caughtError.message
                     : 'Satış güncellenemedi.',
             )
+        } finally {
+            setIsSavingEditedSale(false)
         }
     }
 
-    async function handleCancelSale(
+    function requestCancelSale(
         record: SaleHistoryRecord,
     ) {
         if (
             record.sale.status ===
-            'cancelled'
+            'cancelled' ||
+            isCancellingSale ||
+            isSavingEditedSale
         ) {
             return
         }
 
-        const confirmed =
-            window.confirm(
-                `${formatDisplayDate(
-                    record.sale.saleDate,
-                )} tarihli satış iptal edilsin mi?\n\n` +
-                'Satış geçmişte kalacak ve bu satışın tükettiği stok geri yüklenecek.',
-            )
+        clearFeedback()
+        setPendingCancelSale(record)
+    }
 
-        if (!confirmed) {
+    async function confirmCancelSale() {
+        if (
+            !pendingCancelSale ||
+            isCancellingSale
+        ) {
             return
         }
 
-        clearFeedback()
+        const record = pendingCancelSale
+
+        setIsCancellingSale(true)
 
         try {
             await salesService.cancel(
@@ -822,15 +851,21 @@ function SalesHistoryPage() {
                 resetEditor()
             }
 
+            setPendingCancelSale(null)
+
             setMessage(
                 'Satış iptal edildi ve stoklar FIFO sırasına göre yeniden hesaplandı.',
             )
         } catch (caughtError) {
+            setPendingCancelSale(null)
+
             setError(
                 caughtError instanceof Error
                     ? caughtError.message
                     : 'Satış iptal edilemedi.',
             )
+        } finally {
+            setIsCancellingSale(false)
         }
     }
 
@@ -1167,19 +1202,23 @@ function SalesHistoryPage() {
                             className="primary-button"
                             disabled={
                                 draftItems.length ===
-                                0
+                                    0 ||
+                                isSavingEditedSale
                             }
                             onClick={() =>
                                 void handleSaveEditedSale()
                             }
                         >
                             <Save size={18} />
-                            Değişiklikleri Kaydet
+                            {isSavingEditedSale
+                                ? 'Kaydediliyor...'
+                                : 'Değişiklikleri Kaydet'}
                         </button>
 
                         <button
                             type="button"
                             className="secondary-button"
+                            disabled={isSavingEditedSale}
                             onClick={
                                 stopEditingSale
                             }
@@ -1535,6 +1574,10 @@ function SalesHistoryPage() {
                                                         <button
                                                             type="button"
                                                             className="action-button"
+                                                            disabled={
+                                                                isSavingEditedSale ||
+                                                                isCancellingSale
+                                                            }
                                                             onClick={() =>
                                                                 startEditingSale(
                                                                     record,
@@ -1552,8 +1595,12 @@ function SalesHistoryPage() {
                                                         <button
                                                             type="button"
                                                             className="action-button action-button-danger"
+                                                            disabled={
+                                                                isCancellingSale ||
+                                                                isSavingEditedSale
+                                                            }
                                                             onClick={() =>
-                                                                void handleCancelSale(
+                                                                requestCancelSale(
                                                                     record,
                                                                 )
                                                             }
@@ -1682,6 +1729,7 @@ function SalesHistoryPage() {
                             <button
                                 type="button"
                                 className="mobile-sales-icon-button"
+                                disabled={isSavingEditedSale}
                                 onClick={stopEditingSale}
                                 aria-label="Düzenlemeyi kapat"
                             >
@@ -1882,14 +1930,17 @@ function SalesHistoryPage() {
                             type="button"
                             className="primary-button mobile-sales-save-button"
                             disabled={
-                                draftItems.length === 0
+                                draftItems.length === 0 ||
+                                isSavingEditedSale
                             }
                             onClick={() =>
                                 void handleSaveEditedSale()
                             }
                         >
                             <Save size={17} />
-                            Değişiklikleri Kaydet
+                            {isSavingEditedSale
+                                ? 'Kaydediliyor...'
+                                : 'Değişiklikleri Kaydet'}
                         </button>
                     </article>
                 )}
@@ -2251,6 +2302,10 @@ function SalesHistoryPage() {
                                                             <button
                                                                 type="button"
                                                                 className="action-button"
+                                                                disabled={
+                                                                    isSavingEditedSale ||
+                                                                    isCancellingSale
+                                                                }
                                                                 onClick={() =>
                                                                     startEditingSale(
                                                                         record,
@@ -2268,8 +2323,12 @@ function SalesHistoryPage() {
                                                             <button
                                                                 type="button"
                                                                 className="action-button action-button-danger"
+                                                                disabled={
+                                                                    isCancellingSale ||
+                                                                    isSavingEditedSale
+                                                                }
                                                                 onClick={() =>
-                                                                    void handleCancelSale(
+                                                                    requestCancelSale(
                                                                         record,
                                                                     )
                                                                 }
@@ -2292,6 +2351,28 @@ function SalesHistoryPage() {
                     </div>
                 )}
             </section>
+
+            <ConfirmDialog
+                open={pendingCancelSale !== null}
+                title="Satışı İptal Et"
+                description={
+                    pendingCancelSale
+                        ? `${formatDisplayDate(
+                            pendingCancelSale.sale.saleDate,
+                        )} tarihli satış iptal edilecek. Satış geçmişte kalacak ve bu satışın tükettiği stok geri yüklenecek.`
+                        : ''
+                }
+                confirmLabel="Satışı İptal Et"
+                pendingLabel="İptal ediliyor..."
+                tone="danger"
+                isConfirming={isCancellingSale}
+                onCancel={() => {
+                    if (!isCancellingSale) {
+                        setPendingCancelSale(null)
+                    }
+                }}
+                onConfirm={confirmCancelSale}
+            />
         </div>
     )
 }

@@ -58,6 +58,26 @@ function ProductsPage() {
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
 
+    const [
+        isCategorySaving,
+        setIsCategorySaving,
+    ] = useState(false)
+
+    const [
+        isProductSaving,
+        setIsProductSaving,
+    ] = useState(false)
+
+    const [
+        categoryActionId,
+        setCategoryActionId,
+    ] = useState<string | null>(null)
+
+    const [
+        productActionId,
+        setProductActionId,
+    ] = useState<string | null>(null)
+
     const categoryMap = useMemo(
         () =>
             new Map(
@@ -120,7 +140,13 @@ function ProductsPage() {
         event: FormEvent<HTMLFormElement>,
     ) {
         event.preventDefault()
+
+        if (isCategorySaving) {
+            return
+        }
+
         clearFeedback()
+        setIsCategorySaving(true)
 
         try {
             if (editingCategoryId) {
@@ -144,6 +170,8 @@ function ProductsPage() {
                     ? caughtError.message
                     : 'Kategori kaydedilemedi.',
             )
+        } finally {
+            setIsCategorySaving(false)
         }
     }
 
@@ -151,7 +179,13 @@ function ProductsPage() {
         event: FormEvent<HTMLFormElement>,
     ) {
         event.preventDefault()
+
+        if (isProductSaving) {
+            return
+        }
+
         clearFeedback()
+        setIsProductSaving(true)
 
         try {
             const defaultSalePriceMinor =
@@ -191,6 +225,8 @@ function ProductsPage() {
                     ? caughtError.message
                     : 'Ürün kaydedilemedi.',
             )
+        } finally {
+            setIsProductSaving(false)
         }
     }
 
@@ -217,7 +253,12 @@ function ProductsPage() {
     }
 
     async function toggleCategory(category: Category) {
+        if (categoryActionId !== null) {
+            return
+        }
+
         clearFeedback()
+        setCategoryActionId(category.id)
 
         try {
             await categoryService.setActive(
@@ -236,11 +277,18 @@ function ProductsPage() {
                     ? caughtError.message
                     : 'Kategori durumu değiştirilemedi.',
             )
+        } finally {
+            setCategoryActionId(null)
         }
     }
 
     async function toggleProduct(product: Product) {
+        if (productActionId !== null) {
+            return
+        }
+
         clearFeedback()
+        setProductActionId(product.id)
 
         try {
             await productService.setActive(
@@ -259,8 +307,18 @@ function ProductsPage() {
                     ? caughtError.message
                     : 'Ürün durumu değiştirilemedi.',
             )
+        } finally {
+            setProductActionId(null)
         }
     }
+
+    const isCategoryBusy =
+        isCategorySaving ||
+        categoryActionId !== null
+
+    const isProductBusy =
+        isProductSaving ||
+        productActionId !== null
 
     return (
         <div className="dashboard products-page">
@@ -325,6 +383,7 @@ function ProductsPage() {
                                 type="button"
                                 aria-label="Formu kapat"
                                 onClick={resetProductForm}
+                                disabled={isProductBusy}
                             >
                                 <X size={20} />
                             </button>
@@ -436,6 +495,7 @@ function ProductsPage() {
                             <button
                                 type="submit"
                                 className="mobile-product-save-button"
+                                disabled={isProductBusy}
                             >
                                 {editingProductId ? (
                                     <Pencil size={18} />
@@ -443,9 +503,11 @@ function ProductsPage() {
                                     <Plus size={18} />
                                 )}
 
-                                {editingProductId
-                                    ? 'DEĞİŞİKLİKLERİ KAYDET'
-                                    : 'ÜRÜNÜ EKLE'}
+                                {isProductSaving
+                                    ? 'KAYDEDİLİYOR...'
+                                    : editingProductId
+                                        ? 'DEĞİŞİKLİKLERİ KAYDET'
+                                        : 'ÜRÜNÜ EKLE'}
                             </button>
                         </form>
                     </article>
@@ -531,6 +593,7 @@ function ProductsPage() {
                                         <button
                                             type="button"
                                             className="mobile-product-edit-button"
+                                            disabled={isProductBusy}
                                             onClick={() =>
                                                 startProductEdit(product)
                                             }
@@ -542,14 +605,18 @@ function ProductsPage() {
                                         <button
                                             type="button"
                                             className="mobile-product-power-button"
+                                            disabled={isProductBusy}
                                             onClick={() =>
                                                 void toggleProduct(product)
                                             }
                                         >
                                             <Power size={16} />
-                                            {product.isActive
-                                                ? 'Pasife Al'
-                                                : 'Aktifleştir'}
+                                            {productActionId ===
+                                                product.id
+                                                ? 'İşleniyor...'
+                                                : product.isActive
+                                                    ? 'Pasife Al'
+                                                    : 'Aktifleştir'}
                                         </button>
                                     </div>
                                 </article>
@@ -596,16 +663,22 @@ function ProductsPage() {
                         </label>
 
                         <div className="form-actions">
-                            <button className="primary-button" type="submit">
+                            <button
+                                className="primary-button"
+                                type="submit"
+                                disabled={isCategoryBusy}
+                            >
                                 {editingCategoryId ? (
                                     <Pencil size={18} />
                                 ) : (
                                     <Plus size={18} />
                                 )}
 
-                                {editingCategoryId
-                                    ? 'Değişiklikleri Kaydet'
-                                    : 'Kategori Ekle'}
+                                {isCategorySaving
+                                    ? 'Kaydediliyor...'
+                                    : editingCategoryId
+                                        ? 'Değişiklikleri Kaydet'
+                                        : 'Kategori Ekle'}
                             </button>
 
                             {editingCategoryId && (
@@ -613,6 +686,7 @@ function ProductsPage() {
                                     className="secondary-button"
                                     type="button"
                                     onClick={resetCategoryForm}
+                                    disabled={isCategoryBusy}
                                 >
                                     <X size={17} />
                                     Vazgeç
@@ -649,6 +723,7 @@ function ProductsPage() {
                                         <button
                                             className="action-button"
                                             type="button"
+                                            disabled={isCategoryBusy}
                                             onClick={() =>
                                                 startCategoryEdit(category)
                                             }
@@ -660,13 +735,17 @@ function ProductsPage() {
                                         <button
                                             className="action-button"
                                             type="button"
+                                            disabled={isCategoryBusy}
                                             onClick={() => void toggleCategory(category)}
                                         >
                                             <Power size={15} />
 
-                                            {category.isActive
-                                                ? 'Pasife Al'
-                                                : 'Aktifleştir'}
+                                            {categoryActionId ===
+                                                category.id
+                                                ? 'İşleniyor...'
+                                                : category.isActive
+                                                    ? 'Pasife Al'
+                                                    : 'Aktifleştir'}
                                         </button>
                                     </div>
                                 </div>
@@ -779,16 +858,22 @@ function ProductsPage() {
                         </div>
 
                         <div className="form-actions">
-                            <button className="primary-button" type="submit">
+                            <button
+                                className="primary-button"
+                                type="submit"
+                                disabled={isProductBusy}
+                            >
                                 {editingProductId ? (
                                     <Pencil size={18} />
                                 ) : (
                                     <Plus size={18} />
                                 )}
 
-                                {editingProductId
-                                    ? 'Değişiklikleri Kaydet'
-                                    : 'Ürün Ekle'}
+                                {isProductSaving
+                                    ? 'Kaydediliyor...'
+                                    : editingProductId
+                                        ? 'Değişiklikleri Kaydet'
+                                        : 'Ürün Ekle'}
                             </button>
 
                             {editingProductId && (
@@ -796,6 +881,7 @@ function ProductsPage() {
                                     className="secondary-button"
                                     type="button"
                                     onClick={resetProductForm}
+                                    disabled={isProductBusy}
                                 >
                                     <X size={17} />
                                     Vazgeç
@@ -883,6 +969,7 @@ function ProductsPage() {
                                                 <button
                                                     className="action-button"
                                                     type="button"
+                                                    disabled={isProductBusy}
                                                     onClick={() =>
                                                         startProductEdit(product)
                                                     }
@@ -894,15 +981,19 @@ function ProductsPage() {
                                                 <button
                                                     className="action-button"
                                                     type="button"
+                                                    disabled={isProductBusy}
                                                     onClick={() =>
                                                         void toggleProduct(product)
                                                     }
                                                 >
                                                     <Power size={15} />
 
-                                                    {product.isActive
-                                                        ? 'Pasife Al'
-                                                        : 'Aktifleştir'}
+                                                    {productActionId ===
+                                                        product.id
+                                                        ? 'İşleniyor...'
+                                                        : product.isActive
+                                                            ? 'Pasife Al'
+                                                            : 'Aktifleştir'}
                                                 </button>
                                             </div>
                                         </td>

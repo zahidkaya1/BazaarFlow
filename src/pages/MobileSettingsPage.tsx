@@ -14,6 +14,7 @@ import {
 } from 'react'
 
 import MobilePageHeader from '../components/mobile/MobilePageHeader'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
 import { backupService } from '../services/backupService'
 import { productService } from '../services/productService'
 import {
@@ -239,6 +240,11 @@ function MobileSettingsPage() {
         null,
     )
 
+    const [
+        isRestoreConfirmOpen,
+        setIsRestoreConfirmOpen,
+    ] = useState(false)
+
     const isBusy =
         actionState !== 'idle'
 
@@ -363,6 +369,17 @@ function MobileSettingsPage() {
         }
     }
 
+    function requestRestoreBackup() {
+        if (
+            !pendingBackup ||
+            isBusy
+        ) {
+            return
+        }
+
+        setIsRestoreConfirmOpen(true)
+    }
+
     async function handleRestoreBackup() {
         if (
             !pendingBackup ||
@@ -371,20 +388,7 @@ function MobileSettingsPage() {
             return
         }
 
-        const confirmed =
-            window.confirm(
-                [
-                    'Bu işlem mevcut BazaarFlow verilerinin tamamını seçilen yedekle değiştirecek.',
-                    '',
-                    'Ürünler, stoklar, satışlar ve stok düzeltmeleri geri yüklenecek.',
-                    '',
-                    'Devam etmek istediğinize emin misiniz?',
-                ].join('\n'),
-            )
-
-        if (!confirmed) {
-            return
-        }
+        setIsRestoreConfirmOpen(false)
 
         try {
             setActionState('restoring')
@@ -671,7 +675,7 @@ function MobileSettingsPage() {
                                 className="primary-button settings-restore-button"
                                 disabled={isBusy}
                                 onClick={
-                                    handleRestoreBackup
+                                    requestRestoreBackup
                                 }
                             >
                                 <Upload size={16} />
@@ -701,6 +705,20 @@ function MobileSettingsPage() {
                     </span>
                 </div>
             </section>
+
+            <ConfirmDialog
+                open={isRestoreConfirmOpen}
+                title="Yedeği Geri Yükle"
+                description="Bu işlem mevcut BazaarFlow verilerinin tamamını seçilen yedekle değiştirecek. Ürünler, stoklar, satışlar ve stok düzeltmeleri yedekteki durumla değiştirilecek."
+                confirmLabel="Geri Yükle"
+                pendingLabel="Geri yükleniyor..."
+                tone="warning"
+                isConfirming={actionState === 'restoring'}
+                onCancel={() =>
+                    setIsRestoreConfirmOpen(false)
+                }
+                onConfirm={handleRestoreBackup}
+            />
         </div>
     )
 }
