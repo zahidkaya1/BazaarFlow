@@ -1,4 +1,9 @@
-import { useMemo, useState } from 'react'
+import {
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import {
     Minus,
@@ -28,6 +33,14 @@ type QuickSaleCartEntry = {
 
 type QuickSaleCart = Record<string, QuickSaleCartEntry>
 
+const MODAL_FOCUSABLE_SELECTOR = [
+    'button:not([disabled])',
+    '[href]',
+    'input:not([disabled])',
+    'select:not([disabled])',
+    'textarea:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])',
+].join(',')
 
 function QuickSalePage() {
     const data = useLiveQuery(
@@ -71,6 +84,125 @@ function QuickSalePage() {
 
     const [isSaving, setIsSaving] =
         useState(false)
+
+    const roundingDialogRef =
+        useRef<HTMLElement>(null)
+    const roundingCloseButtonRef =
+        useRef<HTMLButtonElement>(null)
+
+    useEffect(() => {
+        if (!isDiscountPanelOpen) {
+            return
+        }
+
+        const previouslyFocused =
+            document.activeElement instanceof HTMLElement
+                ? document.activeElement
+                : null
+        const previousOverflow =
+            document.body.style.overflow
+
+        document.body.style.overflow =
+            'hidden'
+
+        const focusTimer =
+            window.setTimeout(() => {
+                roundingCloseButtonRef.current?.focus()
+            }, 0)
+
+        function closeRoundingDialog() {
+            setIsDiscountPanelOpen(false)
+        }
+
+        function handleKeyDown(
+            event: KeyboardEvent,
+        ) {
+            const dialog =
+                roundingDialogRef.current
+
+            if (!dialog) {
+                return
+            }
+
+            if (event.key === 'Escape') {
+                event.preventDefault()
+                closeRoundingDialog()
+                return
+            }
+
+            if (event.key !== 'Tab') {
+                return
+            }
+
+            const focusableElements =
+                Array.from(
+                    dialog.querySelectorAll<HTMLElement>(
+                        MODAL_FOCUSABLE_SELECTOR,
+                    ),
+                )
+
+            if (
+                focusableElements.length === 0
+            ) {
+                event.preventDefault()
+                dialog.focus()
+                return
+            }
+
+            const firstElement =
+                focusableElements[0]!
+            const lastElement =
+                focusableElements[
+                    focusableElements.length - 1
+                ]!
+            const activeElement =
+                document.activeElement
+
+            if (
+                event.shiftKey &&
+                (
+                    activeElement ===
+                        firstElement ||
+                    !dialog.contains(
+                        activeElement,
+                    )
+                )
+            ) {
+                event.preventDefault()
+                lastElement.focus()
+                return
+            }
+
+            if (
+                !event.shiftKey &&
+                activeElement === lastElement
+            ) {
+                event.preventDefault()
+                firstElement.focus()
+            }
+        }
+
+        document.addEventListener(
+            'keydown',
+            handleKeyDown,
+        )
+
+        return () => {
+            window.clearTimeout(focusTimer)
+            document.removeEventListener(
+                'keydown',
+                handleKeyDown,
+            )
+            document.body.style.overflow =
+                previousOverflow
+
+            if (
+                previouslyFocused?.isConnected
+            ) {
+                previouslyFocused.focus()
+            }
+        }
+    }, [isDiscountPanelOpen])
 
     const activeProducts = useMemo(
         () =>
@@ -887,10 +1019,13 @@ function QuickSalePage() {
                     }}
                 >
                     <section
+                        ref={roundingDialogRef}
                         className="quick-sale-discount-panel quick-sale-rounding-panel"
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="quick-sale-rounding-title"
+                        aria-describedby="quick-sale-rounding-help"
+                        tabIndex={-1}
                     >
                         <div className="quick-sale-discount-header">
                             <div>
@@ -904,6 +1039,7 @@ function QuickSalePage() {
                             </div>
 
                             <button
+                                ref={roundingCloseButtonRef}
                                 type="button"
                                 aria-label="Kapat"
                                 onClick={() =>
@@ -929,7 +1065,10 @@ function QuickSalePage() {
                                 </strong>
                             </div>
 
-                            <div className="quick-sale-rounding-help">
+                            <div
+                                id="quick-sale-rounding-help"
+                                className="quick-sale-rounding-help"
+                            >
                                 Pazarlık sonrası müşteriden alınacak
                                 yakın toplamı seçin. İndirim ürünlere
                                 fiyatları oranında otomatik dağıtılır.

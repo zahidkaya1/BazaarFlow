@@ -4,6 +4,7 @@ import {
     useSyncExternalStore,
     type ComponentType,
 } from 'react'
+import PageLoading from './ui/PageLoading'
 
 const MOBILE_QUERY = '(max-width: 768px)'
 
@@ -94,9 +95,9 @@ export function createResponsivePage({
         return (
             <Suspense
                 fallback={
-                    <div className="page-loading">
-                        {fallback}
-                    </div>
+                    <PageLoading
+                        message={fallback}
+                    />
                 }
             >
                 {isMobile ? (

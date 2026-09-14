@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import MobileBottomNav from './components/layout/MobileBottomNav'
 import Sidebar from './components/layout/Sidebar'
+import PageLoading from './components/ui/PageLoading'
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const QuickSalePage = lazy(() => import('./pages/QuickSalePage'))
@@ -12,16 +13,7 @@ const ProductsPage = lazy(() => import('./pages/ProductsPage'))
 const ReportsPage = lazy(() => import('./pages/ReportsPage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 const MobileMorePage = lazy(() => import('./pages/MobileMorePage'))
-
-function RouteFallback() {
-  return (
-    <div className="dashboard">
-      <div className="empty-state empty-state-compact" role="status">
-        <strong>Yükleniyor...</strong>
-      </div>
-    </div>
-  )
-}
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 
 function App() {
   return (
@@ -29,7 +21,7 @@ function App() {
       <Sidebar />
 
       <main className="main-content">
-        <Suspense fallback={<RouteFallback />}>
+        <Suspense fallback={<PageLoading />}>
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/quick-sale" element={<QuickSalePage />} />
@@ -41,6 +33,7 @@ function App() {
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/more" element={<MobileMorePage />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
       </main>
