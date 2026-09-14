@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">BazaarFlow</title>
+  <defs>
+    <linearGradient id="bazaarflow-gradient" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#16a34a"/>
+      <stop offset="1" stop-color="#14b8a6"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#bazaarflow-gradient)"/>
+  <path
+    fill="#fff"
+    d="M20 14h14.2c9.1 0 14.5 4.1 14.5 10.7 0 4.1-2.1 7.2-5.9 9 4.9 1.5 7.7 5.1 7.7 10 0 7.5-6 12.3-15.5 12.3H20V14Zm13.3 16c4.1 0 6.4-1.6 6.4-4.7 0-3-2.3-4.5-6.4-4.5h-4.8V30h4.8Zm1 19.2c4.7 0 7.3-1.9 7.3-5.5s-2.6-5.4-7.3-5.4h-5.8v10.9h5.8Z"
+  />
+</svg>
