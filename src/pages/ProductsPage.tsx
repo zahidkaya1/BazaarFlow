@@ -1,9 +1,10 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Boxes, Pencil, Plus, Power, X } from 'lucide-react'
+import { Boxes, Pencil, Plus, Power, Trash2, X } from 'lucide-react'
 import { categoryService } from '../services/categoryService'
 import { inventoryService } from '../services/inventoryService'
 import { productService } from '../services/productService'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
 import type { Category } from '../types/category'
 import type { InventoryLot } from '../types/inventoryLot'
 import type { Product } from '../types/product'
@@ -77,6 +78,13 @@ function ProductsPage() {
         productActionId,
         setProductActionId,
     ] = useState<string | null>(null)
+
+    const [deletionTarget, setDeletionTarget] = useState<
+        | { kind: 'product'; id: string; name: string }
+        | { kind: 'category'; id: string; name: string }
+        | null
+    >(null)
+    const [isDeleting, setIsDeleting] = useState(false)
 
     const categoryMap = useMemo(
         () =>
@@ -312,13 +320,124 @@ function ProductsPage() {
         }
     }
 
+    async function requestCategoryDelete(category: Category) {
+        if (categoryActionId !== null || isDeleting) {
+            return
+        }
+
+        clearFeedback()
+        setCategoryActionId(category.id)
+
+        try {
+            const check = await categoryService.getDeletionCheck(category.id)
+
+            if (!check.canDelete) {
+                setError(
+                    check.reason ??
+                    'Kategori kalıcı olarak silinemiyor.',
+                )
+                return
+            }
+
+            setDeletionTarget({
+                kind: 'category',
+                id: category.id,
+                name: category.name,
+            })
+        } catch (caughtError) {
+            setError(
+                caughtError instanceof Error
+                    ? caughtError.message
+                    : 'Kategori silme durumu kontrol edilemedi.',
+            )
+        } finally {
+            setCategoryActionId(null)
+        }
+    }
+
+    async function requestProductDelete(product: Product) {
+        if (productActionId !== null || isDeleting) {
+            return
+        }
+
+        clearFeedback()
+        setProductActionId(product.id)
+
+        try {
+            const check = await productService.getDeletionCheck(product.id)
+
+            if (!check.canDelete) {
+                setError(
+                    check.reason ??
+                    'Ürün kalıcı olarak silinemiyor.',
+                )
+                return
+            }
+
+            setDeletionTarget({
+                kind: 'product',
+                id: product.id,
+                name: product.name,
+            })
+        } catch (caughtError) {
+            setError(
+                caughtError instanceof Error
+                    ? caughtError.message
+                    : 'Ürün silme durumu kontrol edilemedi.',
+            )
+        } finally {
+            setProductActionId(null)
+        }
+    }
+
+    async function confirmPermanentDelete() {
+        if (!deletionTarget || isDeleting) {
+            return
+        }
+
+        clearFeedback()
+        setIsDeleting(true)
+
+        try {
+            if (deletionTarget.kind === 'product') {
+                await productService.deletePermanently(deletionTarget.id)
+
+                if (editingProductId === deletionTarget.id) {
+                    resetProductForm()
+                }
+
+                setMessage('Ürün kalıcı olarak silindi.')
+            } else {
+                await categoryService.deletePermanently(deletionTarget.id)
+
+                if (editingCategoryId === deletionTarget.id) {
+                    resetCategoryForm()
+                }
+
+                setMessage('Kategori kalıcı olarak silindi.')
+            }
+
+            setDeletionTarget(null)
+        } catch (caughtError) {
+            setError(
+                caughtError instanceof Error
+                    ? caughtError.message
+                    : 'Kayıt kalıcı olarak silinemedi.',
+            )
+        } finally {
+            setIsDeleting(false)
+        }
+    }
+
     const isCategoryBusy =
         isCategorySaving ||
-        categoryActionId !== null
+        categoryActionId !== null ||
+        isDeleting
 
     const isProductBusy =
         isProductSaving ||
-        productActionId !== null
+        productActionId !== null ||
+        isDeleting
 
     return (
         <div className="dashboard products-page">
@@ -618,6 +737,18 @@ function ProductsPage() {
                                                     ? 'Pasife Al'
                                                     : 'Aktifleştir'}
                                         </button>
+
+                                        <button
+                                            type="button"
+                                            className="mobile-product-power-button"
+                                            disabled={isProductBusy}
+                                            onClick={() =>
+                                                void requestProductDelete(product)
+                                            }
+                                        >
+                                            <Trash2 size={16} />
+                                            Sil
+                                        </button>
                                     </div>
                                 </article>
                             )
@@ -746,6 +877,19 @@ function ProductsPage() {
                                                 : category.isActive
                                                     ? 'Pasife Al'
                                                     : 'Aktifleştir'}
+                                        </button>
+
+
+                                        <button
+                                            className="action-button"
+                                            type="button"
+                                            disabled={isCategoryBusy}
+                                            onClick={() =>
+                                                void requestCategoryDelete(category)
+                                            }
+                                        >
+                                            <Trash2 size={15} />
+                                            Sil
                                         </button>
                                     </div>
                                 </div>
@@ -995,6 +1139,19 @@ function ProductsPage() {
                                                             ? 'Pasife Al'
                                                             : 'Aktifleştir'}
                                                 </button>
+
+
+                                                <button
+                                                    className="action-button"
+                                                    type="button"
+                                                    disabled={isProductBusy}
+                                                    onClick={() =>
+                                                        void requestProductDelete(product)
+                                                    }
+                                                >
+                                                    <Trash2 size={15} />
+                                                    Sil
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -1004,6 +1161,30 @@ function ProductsPage() {
                     </div>
                 )}
             </section>
+
+            <ConfirmDialog
+                open={deletionTarget !== null}
+                title={
+                    deletionTarget?.kind === 'product'
+                        ? 'Ürünü kalıcı olarak sil?'
+                        : 'Kategoriyi kalıcı olarak sil?'
+                }
+                description={
+                    deletionTarget
+                        ? `“${deletionTarget.name}” kalıcı olarak silinecek. Bu işlem geri alınamaz.`
+                        : ''
+                }
+                confirmLabel="Kalıcı Olarak Sil"
+                pendingLabel="Siliniyor..."
+                tone="danger"
+                isConfirming={isDeleting}
+                onConfirm={confirmPermanentDelete}
+                onCancel={() => {
+                    if (!isDeleting) {
+                        setDeletionTarget(null)
+                    }
+                }}
+            />
         </div>
     )
 }

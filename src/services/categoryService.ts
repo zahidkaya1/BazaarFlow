@@ -12,6 +12,11 @@ export type UpdateCategoryInput = {
     description?: string
 }
 
+export type CategoryDeletionCheck = {
+    canDelete: boolean
+    reason?: string
+}
+
 function normalizeName(value: string): string {
     return value.trim()
 }
@@ -32,6 +37,26 @@ async function ensureCategoryNameAvailable(
     if (duplicate) {
         throw new Error('Bu isimde bir kategori zaten mevcut.')
     }
+}
+
+async function getDeletionCheck(id: string): Promise<CategoryDeletionCheck> {
+    const current = await db.categories.get(id)
+
+    if (!current) {
+        throw new Error('Kategori bulunamadı.')
+    }
+
+    const productCount = await db.products.where('categoryId').equals(id).count()
+
+    if (productCount > 0) {
+        return {
+            canDelete: false,
+            reason:
+                'Bu kategori bir veya daha fazla ürün tarafından kullanıldığı için kalıcı olarak silinemez. Ürün ilişkilerini ve geçmiş görünümünü korumak için kategoriyi pasife alın.',
+        }
+    }
+
+    return { canDelete: true }
 }
 
 export const categoryService = {
@@ -124,5 +149,23 @@ export const categoryService = {
         await db.categories.put(updated)
 
         return updated
+    },
+
+    async getDeletionCheck(id: string): Promise<CategoryDeletionCheck> {
+        return getDeletionCheck(id)
+    },
+
+    async deletePermanently(id: string): Promise<void> {
+        await db.transaction('rw', db.categories, db.products, async () => {
+            const check = await getDeletionCheck(id)
+
+            if (!check.canDelete) {
+                throw new Error(
+                    check.reason ?? 'Kategori kalıcı olarak silinemiyor.',
+                )
+            }
+
+            await db.categories.delete(id)
+        })
     },
 }

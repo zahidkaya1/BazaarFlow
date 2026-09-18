@@ -20,6 +20,11 @@ export type UpdateProductInput = {
     note?: string
 }
 
+export type ProductDeletionCheck = {
+    canDelete: boolean
+    reason?: string
+}
+
 function normalizeOptionalText(value?: string): string | undefined {
     const normalized = value?.trim()
 
@@ -74,6 +79,39 @@ async function ensureSkuAvailable(
     if (duplicate) {
         throw new Error('Bu SKU başka bir üründe kullanılıyor.')
     }
+}
+
+async function getDeletionCheck(id: string): Promise<ProductDeletionCheck> {
+    const current = await db.products.get(id)
+
+    if (!current) {
+        throw new Error('Ürün bulunamadı.')
+    }
+
+    const [inventoryLotCount, saleItemCount, adjustmentCount] =
+        await Promise.all([
+            db.inventoryLots.where('productId').equals(id).count(),
+            db.saleItems.where('productId').equals(id).count(),
+            db.inventoryAdjustments.where('productId').equals(id).count(),
+        ])
+
+    if (saleItemCount > 0) {
+        return {
+            canDelete: false,
+            reason:
+                'Bu ürün satış geçmişinde kullanıldığı için kalıcı olarak silinemez. Geçmiş kayıtları korumak için ürünü pasife alın.',
+        }
+    }
+
+    if (inventoryLotCount > 0 || adjustmentCount > 0) {
+        return {
+            canDelete: false,
+            reason:
+                'Bu ürün stok hareketlerinde kullanıldığı için kalıcı olarak silinemez. FIFO ve stok geçmişini korumak için ürünü pasife alın.',
+        }
+    }
+
+    return { canDelete: true }
 }
 
 export const productService = {
@@ -202,5 +240,30 @@ export const productService = {
         await db.products.put(updated)
 
         return updated
+    },
+
+    async getDeletionCheck(id: string): Promise<ProductDeletionCheck> {
+        return getDeletionCheck(id)
+    },
+
+    async deletePermanently(id: string): Promise<void> {
+        await db.transaction(
+            'rw',
+            db.products,
+            db.inventoryLots,
+            db.saleItems,
+            db.inventoryAdjustments,
+            async () => {
+                const check = await getDeletionCheck(id)
+
+                if (!check.canDelete) {
+                    throw new Error(
+                        check.reason ?? 'Ürün kalıcı olarak silinemiyor.',
+                    )
+                }
+
+                await db.products.delete(id)
+            },
+        )
     },
 }
