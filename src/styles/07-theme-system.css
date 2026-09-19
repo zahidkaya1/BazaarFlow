@@ -1,0 +1,638 @@
+/* BazaarFlow — Light/Dark, renk temaları ve tema polish */
+
+/* ===== 15. LIGHT / DARK MODE ===== */
+.theme-selector {
+  display: grid;
+  gap: 10px;
+}
+
+.theme-selector-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.theme-option {
+  min-width: 0;
+  min-height: 70px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-background);
+  color: var(--color-text-muted);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    color 140ms ease,
+    transform 140ms ease;
+}
+
+.theme-option:hover {
+  border-color: var(--color-success-border);
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.theme-option-active {
+  border-color: var(--color-success-border);
+  background: var(--color-primary-soft);
+  color: var(--color-secondary);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-secondary) 16%, transparent);
+}
+
+.theme-option > svg {
+  flex: 0 0 auto;
+}
+
+.theme-option > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.theme-option strong {
+  color: inherit;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.theme-option small {
+  color: var(--color-text-soft);
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+.theme-selector-note {
+  margin: 0;
+  color: var(--color-text-soft);
+  font-size: 9.5px;
+  line-height: 1.45;
+}
+
+.mobile-settings-theme-card {
+  display: grid;
+  gap: 11px;
+  padding: 11px 12px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 13px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.mobile-settings-theme-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.theme-selector-compact .theme-selector-options {
+  gap: 6px;
+}
+
+.theme-selector-compact .theme-option {
+  min-height: 40px;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 8px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.theme-selector-compact .theme-option strong {
+  font-size: 9.5px;
+}
+
+html[data-theme="dark"] .mobile-bottom-nav {
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.28);
+}
+
+html[data-theme="dark"] .dashboard-panel,
+html[data-theme="dark"] .confirm-dialog,
+html[data-theme="dark"] .mobile-settings-action-card,
+html[data-theme="dark"] .mobile-settings-theme-card,
+html[data-theme="dark"] .mobile-settings-static-card {
+  box-shadow: var(--shadow-card);
+}
+
+html[data-theme="dark"] .settings-status-dismiss:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color: var(--color-text-soft);
+}
+
+html[data-theme="dark"] img {
+  color-scheme: normal;
+}
+
+@media (max-width: 768px) {
+  .theme-selector-compact .theme-option > svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+/* ===== 15. RENK TEMALARI ===== */
+
+/* BazaarFlow varsayılan renkleri :root ve dark tema bloğundan gelir. */
+
+html[data-color-theme="ocean"] {
+  --color-primary: #0284c7;
+  --color-primary-dark: #0369a1;
+  --color-primary-soft: #e0f2fe;
+  --color-secondary: #0891b2;
+  --color-accent: #06b6d4;
+  --color-brand-soft: #ecfeff;
+  --color-sidebar: #102832;
+  --color-sidebar-hover: #173b49;
+  --color-action: #0369a1;
+  --color-action-hover: #075985;
+}
+
+html[data-theme="dark"][data-color-theme="ocean"] {
+  --color-primary: #38bdf8;
+  --color-primary-dark: #0ea5e9;
+  --color-primary-soft: #0b2634;
+  --color-secondary: #22d3ee;
+  --color-accent: #22d3ee;
+  --color-brand-soft: #0b2229;
+  --color-sidebar: #06151c;
+  --color-sidebar-hover: #0d2935;
+}
+
+html[data-color-theme="indigo"] {
+  --color-primary: #4f46e5;
+  --color-primary-dark: #4338ca;
+  --color-primary-soft: #eef2ff;
+  --color-secondary: #2563eb;
+  --color-accent: #3b82f6;
+  --color-brand-soft: #eef4ff;
+  --color-sidebar: #181a38;
+  --color-sidebar-hover: #25284f;
+  --color-action: #4338ca;
+  --color-action-hover: #3730a3;
+}
+
+html[data-theme="dark"][data-color-theme="indigo"] {
+  --color-primary: #818cf8;
+  --color-primary-dark: #6366f1;
+  --color-primary-soft: #1c1e3f;
+  --color-secondary: #60a5fa;
+  --color-accent: #60a5fa;
+  --color-brand-soft: #171d38;
+  --color-sidebar: #0d0e20;
+  --color-sidebar-hover: #191b38;
+}
+
+html[data-color-theme="violet"] {
+  --color-primary: #7c3aed;
+  --color-primary-dark: #6d28d9;
+  --color-primary-soft: #f3e8ff;
+  --color-secondary: #9333ea;
+  --color-accent: #a855f7;
+  --color-brand-soft: #faf5ff;
+  --color-sidebar: #291636;
+  --color-sidebar-hover: #3b2050;
+  --color-action: #6d28d9;
+  --color-action-hover: #5b21b6;
+}
+
+html[data-theme="dark"][data-color-theme="violet"] {
+  --color-primary: #a78bfa;
+  --color-primary-dark: #8b5cf6;
+  --color-primary-soft: #281b3b;
+  --color-secondary: #c084fc;
+  --color-accent: #c084fc;
+  --color-brand-soft: #21172f;
+  --color-sidebar: #160b20;
+  --color-sidebar-hover: #2b173b;
+}
+
+html[data-color-theme="rose"] {
+  --color-primary: #e11d48;
+  --color-primary-dark: #be123c;
+  --color-primary-soft: #fff1f2;
+  --color-secondary: #db2777;
+  --color-accent: #ec4899;
+  --color-brand-soft: #fdf2f8;
+  --color-sidebar: #35131e;
+  --color-sidebar-hover: #4a1d2b;
+  --color-action: #be123c;
+  --color-action-hover: #9f1239;
+}
+
+html[data-theme="dark"][data-color-theme="rose"] {
+  --color-primary: #fb7185;
+  --color-primary-dark: #f43f5e;
+  --color-primary-soft: #35151d;
+  --color-secondary: #f472b6;
+  --color-accent: #f472b6;
+  --color-brand-soft: #30131f;
+  --color-sidebar: #1c0a10;
+  --color-sidebar-hover: #35131f;
+}
+
+html[data-color-theme="sunset"] {
+  --color-primary: #ea580c;
+  --color-primary-dark: #c2410c;
+  --color-primary-soft: #fff7ed;
+  --color-secondary: #d97706;
+  --color-accent: #f59e0b;
+  --color-brand-soft: #fffbeb;
+  --color-sidebar: #352015;
+  --color-sidebar-hover: #4b2c1a;
+  --color-action: #c2410c;
+  --color-action-hover: #9a3412;
+}
+
+html[data-theme="dark"][data-color-theme="sunset"] {
+  --color-primary: #fb923c;
+  --color-primary-dark: #f97316;
+  --color-primary-soft: #352014;
+  --color-secondary: #fbbf24;
+  --color-accent: #fbbf24;
+  --color-brand-soft: #2e2110;
+  --color-sidebar: #1b1009;
+  --color-sidebar-hover: #362013;
+}
+
+html[data-color-theme="graphite"] {
+  --color-primary: #475569;
+  --color-primary-dark: #334155;
+  --color-primary-soft: #f1f5f9;
+  --color-secondary: #64748b;
+  --color-accent: #64748b;
+  --color-brand-soft: #f8fafc;
+  --color-sidebar: #1e293b;
+  --color-sidebar-hover: #334155;
+  --color-action: #475569;
+  --color-action-hover: #334155;
+}
+
+html[data-theme="dark"][data-color-theme="graphite"] {
+  --color-primary: #64748b;
+  --color-primary-dark: #475569;
+  --color-primary-soft: #1e293b;
+  --color-secondary: #94a3b8;
+  --color-accent: #94a3b8;
+  --color-brand-soft: #18212f;
+  --color-sidebar: #0f172a;
+  --color-sidebar-hover: #1e293b;
+}
+
+.color-theme-section {
+  display: grid;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border-soft);
+}
+
+.color-theme-heading {
+  display: grid;
+  gap: 3px;
+}
+
+.color-theme-heading strong {
+  color: var(--color-text);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.color-theme-heading small {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.color-theme-options {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.color-theme-option {
+  min-width: 0;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface-subtle);
+  color: var(--color-text-muted);
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    color 140ms ease,
+    transform 140ms ease;
+}
+
+.color-theme-option:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+  transform: translateY(-1px);
+}
+
+.color-theme-option-active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+
+.color-theme-swatch {
+  width: 25px;
+  height: 25px;
+  flex: 0 0 25px;
+  border: 2px solid var(--color-surface);
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px var(--color-border-strong);
+}
+
+.color-theme-label {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.theme-selector-compact .color-theme-section {
+  padding-top: 14px;
+}
+
+.theme-selector-compact .color-theme-heading strong {
+  font-size: 0.82rem;
+}
+
+.theme-selector-compact .color-theme-options {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.theme-selector-compact .color-theme-option {
+  min-height: 52px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 4px;
+}
+
+.theme-selector-compact .color-theme-swatch {
+  width: 24px;
+  height: 24px;
+  flex-basis: 24px;
+}
+
+.theme-selector-compact .color-theme-label {
+  max-width: 100%;
+  font-size: 0.67rem;
+}
+
+@media (max-width: 760px) {
+  .color-theme-options {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .theme-selector-compact .color-theme-options {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 390px) {
+  .theme-selector-compact .color-theme-options {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+
+/* ===== 17. LIGHT / DARK + RENK TEMASI POLISH ===== */
+/*
+ * Kullanıcı hangi görünüm + renk kombinasyonunu seçerse seçsin aynı
+ * etkileşim hiyerarşisini korur. Özellikle koyu temadaki parlak accent
+ * renklerinin ana butonlarda kontrast kaybetmesini önler.
+ */
+
+::selection {
+  background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+  color: var(--color-text);
+}
+
+html {
+  scrollbar-color:
+    color-mix(in srgb, var(--color-text-soft) 55%, transparent)
+    var(--color-background);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background:
+    color-mix(in srgb, var(--color-text-soft) 55%, transparent)
+    padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background:
+    color-mix(in srgb, var(--color-text-muted) 72%, transparent)
+    padding-box;
+}
+
+/* Sidebar artık seçilen paleti gerçekten yansıtır; sabit turkuaz kalmaz. */
+.navigation-item-active {
+  background: var(--color-sidebar-active-bg);
+  color: var(--color-sidebar-active-text);
+}
+
+.navigation-item-active:hover {
+  background: var(--color-sidebar-active-bg-hover);
+  color: var(--color-sidebar-active-text);
+}
+
+.sidebar-footer {
+  border-top-color: color-mix(in srgb, var(--color-sidebar-text) 10%, transparent);
+}
+
+/* Ana CTA'lar koyu/açık temada aynı okunabilir kontrastı kullanır. */
+.primary-button,
+.reports-export-button,
+.quick-sale-product-count,
+.quick-sale-complete-button,
+.mobile-stock-submit,
+.mobile-product-add-button,
+.mobile-product-save-button,
+.pi-button-primary,
+.mpi-action-primary {
+  border-color: var(--color-action);
+  background: var(--color-action);
+  color: var(--color-on-action);
+}
+
+.primary-button:hover:not(:disabled),
+.reports-export-button:hover:not(:disabled),
+.quick-sale-complete-button:hover:not(:disabled),
+.mobile-stock-submit:hover:not(:disabled),
+.mobile-product-add-button:hover:not(:disabled),
+.mobile-product-save-button:hover:not(:disabled),
+.pi-button-primary:hover:not(:disabled),
+.mpi-action-primary:hover:not(:disabled) {
+  border-color: var(--color-action-hover);
+  background: var(--color-action-hover);
+  color: var(--color-on-action);
+}
+
+/* Focus halkaları tüm paletlerde seçilen accent rengine bağlanır. */
+.form-field input:focus,
+.form-field select:focus,
+.inventory-search-field:focus-within,
+.history-filter-control:focus-within,
+.history-status-select:focus,
+.pi-field input:focus,
+.pi-field select:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
+.confirm-dialog button:focus-visible,
+.quick-sale-discount-panel button:focus-visible,
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+  outline-color: var(--color-focus-ring);
+}
+
+/* Görünüm ve renk seçicileri artık yeşile değil aktif palette bağlı. */
+.theme-option:hover,
+.theme-option-active {
+  border-color: color-mix(in srgb, var(--color-primary) 58%, var(--color-border));
+}
+
+.theme-option-active {
+  background: var(--color-primary-soft);
+  color: var(--color-secondary);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 24%, transparent);
+}
+
+.color-theme-option-active {
+  color: var(--color-primary-dark);
+}
+
+html[data-theme="dark"] .color-theme-option-active {
+  color: var(--color-primary);
+}
+
+html[data-theme="dark"] .theme-option-active small,
+html[data-theme="dark"] .color-theme-option-active .color-theme-label {
+  color: color-mix(in srgb, currentColor 78%, var(--color-text));
+}
+
+/* Mobil aktif navigasyonun sınırı da seçili paleti kullanır. */
+.mobile-bottom-nav-item-active {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 16%, transparent);
+}
+
+.mobile-bottom-nav {
+  box-shadow: var(--shadow-bottom-nav);
+}
+
+/* Modal, drawer ve sheet katmanları light/dark ile birlikte dengelenir. */
+.pi-dialog-backdrop,
+.mpi-sheet-backdrop {
+  background: var(--color-overlay-soft);
+}
+
+.pi-dialog {
+  box-shadow: var(--shadow-floating);
+}
+
+.pi-product-drawer {
+  box-shadow: var(--shadow-side-panel);
+}
+
+.mpi-detail-sheet {
+  box-shadow: 0 -18px 48px color-mix(in srgb, var(--color-overlay) 34%, transparent);
+}
+
+.data-center-menu {
+  box-shadow: 0 18px 44px color-mix(in srgb, var(--color-overlay) 34%, transparent);
+}
+
+.data-center-protection-card {
+  box-shadow: var(--shadow-accent-soft);
+}
+
+/* Hover yüzeyleri koyu temada beyaz sabit renge kaçmaz. */
+.settings-status-dismiss:hover,
+html[data-theme="dark"] .settings-status-dismiss:hover {
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+  color: var(--color-text);
+}
+
+/* Seçili/segment durumlarında palette bağlı ama sakin bir vurgu. */
+.pi-segmented button.is-active,
+.mh-tabs button.is-active {
+  border-color: color-mix(in srgb, var(--color-primary) 24%, var(--color-border));
+  color: var(--color-secondary);
+}
+
+/* Koyu temada form kontrollerinin native yüzeyleri de koyu kalır. */
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+  color-scheme: dark;
+}
+
+/* Tema geçişi sırasında büyük alanlarda ani renk sıçramasını azaltır. */
+body,
+.sidebar,
+.mobile-bottom-nav,
+.dashboard-panel,
+.mobile-settings-action-card,
+.mobile-settings-theme-card,
+.mobile-settings-static-card,
+.pi-dialog,
+.pi-product-drawer,
+.mpi-detail-sheet {
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body,
+  .sidebar,
+  .mobile-bottom-nav,
+  .dashboard-panel,
+  .mobile-settings-action-card,
+  .mobile-settings-theme-card,
+  .mobile-settings-static-card,
+  .pi-dialog,
+  .pi-product-drawer,
+  .mpi-detail-sheet {
+    transition: none;
+  }
+}
+
