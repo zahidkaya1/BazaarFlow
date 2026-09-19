@@ -11520,3 +11520,276 @@ body,
     transition: none;
   }
 }
+
+/* ===== 18. WINDOWS / MOBİL PLATFORM UI POLISH ===== */
+/*
+ * Aynı veri ve tema altyapısını koruyup etkileşim yoğunluğunu platforma
+ * göre ayarlar. Windows native uygulama daha kompakt masaüstü ritmi;
+ * dar ekranlar ise daha geniş dokunmatik hedefler kullanır.
+ */
+
+html[data-app-platform="windows"][data-ui-mode="desktop"] {
+  --windows-sidebar-width: 236px;
+}
+
+html[data-app-platform="windows"][data-ui-mode="desktop"] .sidebar {
+  width: var(--windows-sidebar-width);
+  padding: 20px 14px;
+}
+
+html[data-app-platform="windows"][data-ui-mode="desktop"] .sidebar-brand {
+  gap: 10px;
+  padding: 0 7px 22px;
+}
+
+html[data-app-platform="windows"][data-ui-mode="desktop"] .brand-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+}
+
+html[data-app-platform="windows"][data-ui-mode="desktop"] .brand-name {
+  font-size: 17px;
+}
+
+html[data-app-platform="windows"][data-ui-mode="desktop"] .sidebar-navigation {
+  gap: 4px;
+}
+
+html[data-app-platform="windows"][data-ui-mode="desktop"] .navigation-item {
+  min-height: 40px;
+  gap: 10px;
+  padding: 0 11px;
+  border-radius: 9px;
+  font-size: 13.5px;
+}
+
+html[data-app-platform="windows"][data-ui-mode="desktop"] .main-content {
+  width: calc(100% - var(--windows-sidebar-width));
+  margin-left: var(--windows-sidebar-width);
+  padding: 30px 34px 44px;
+}
+
+html[data-app-platform="windows"][data-ui-mode="desktop"] .dashboard {
+  max-width: 1540px;
+}
+
+html[data-app-platform="windows"][data-ui-mode="desktop"] .page-header {
+  margin-bottom: 24px;
+}
+
+html[data-app-platform="windows"][data-ui-mode="desktop"] .page-header h1 {
+  font-size: 28px;
+}
+
+html[data-app-platform="windows"][data-ui-mode="desktop"] .summary-grid,
+html[data-app-platform="windows"][data-ui-mode="desktop"] .dashboard-grid,
+html[data-app-platform="windows"][data-ui-mode="desktop"] .dashboard-summary-grid,
+html[data-app-platform="windows"][data-ui-mode="desktop"] .dashboard-secondary-grid,
+html[data-app-platform="windows"][data-ui-mode="desktop"] .reports-summary-grid,
+html[data-app-platform="windows"][data-ui-mode="desktop"] .reports-chart-grid,
+html[data-app-platform="windows"][data-ui-mode="desktop"] .settings-grid {
+  gap: 16px;
+}
+
+html[data-app-platform="windows"][data-ui-mode="desktop"] .summary-card {
+  padding: 18px;
+  border-radius: 12px;
+}
+
+html[data-app-platform="windows"][data-ui-mode="desktop"] .summary-card-header {
+  margin-bottom: 14px;
+}
+
+html[data-app-platform="windows"][data-ui-mode="desktop"] .dashboard-panel {
+  padding: 20px;
+  border-radius: 12px;
+}
+
+html[data-app-platform="windows"][data-ui-mode="desktop"] .panel-header {
+  padding-bottom: 15px;
+}
+
+html[data-app-platform="windows"][data-ui-mode="desktop"] .primary-button,
+html[data-app-platform="windows"][data-ui-mode="desktop"] .secondary-button,
+html[data-app-platform="windows"][data-ui-mode="desktop"] .reports-export-button,
+html[data-app-platform="windows"][data-ui-mode="desktop"] .pi-button {
+  min-height: 40px;
+}
+
+html[data-app-platform="windows"][data-ui-mode="desktop"] .product-table-wrapper,
+html[data-app-platform="windows"][data-ui-mode="desktop"] .pi-table-wrapper,
+html[data-app-platform="windows"][data-ui-mode="desktop"] .reports-table-panel {
+  scrollbar-gutter: stable;
+}
+
+html[data-app-platform="windows"][data-ui-mode="desktop"] .pi-dialog,
+html[data-app-platform="windows"][data-ui-mode="desktop"] .confirm-dialog {
+  border-radius: 14px;
+}
+
+html[data-app-platform="windows"][data-ui-mode="desktop"] .pi-product-drawer {
+  width: min(520px, calc(100vw - var(--windows-sidebar-width) - 24px));
+}
+
+@media (hover: hover) and (pointer: fine) {
+  html[data-ui-mode="desktop"] .primary-button,
+  html[data-ui-mode="desktop"] .secondary-button,
+  html[data-ui-mode="desktop"] .action-button,
+  html[data-ui-mode="desktop"] .navigation-item,
+  html[data-ui-mode="desktop"] .reports-period-button,
+  html[data-ui-mode="desktop"] .color-theme-option,
+  html[data-ui-mode="desktop"] .theme-option {
+    transition:
+      background-color 140ms ease,
+      border-color 140ms ease,
+      color 140ms ease,
+      box-shadow 140ms ease,
+      transform 140ms ease;
+  }
+
+  html[data-app-platform="windows"][data-ui-mode="desktop"] .primary-button:hover:not(:disabled),
+  html[data-app-platform="windows"][data-ui-mode="desktop"] .secondary-button:hover:not(:disabled),
+  html[data-app-platform="windows"][data-ui-mode="desktop"] .reports-export-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  html[data-app-platform="windows"][data-ui-mode="desktop"] .product-table tbody tr,
+  html[data-app-platform="windows"][data-ui-mode="desktop"] .pi-table tbody tr,
+  html[data-app-platform="windows"][data-ui-mode="desktop"] .reports-table tbody tr {
+    transition: background-color 120ms ease;
+  }
+
+  html[data-app-platform="windows"][data-ui-mode="desktop"] .product-table tbody tr:hover,
+  html[data-app-platform="windows"][data-ui-mode="desktop"] .pi-table tbody tr:hover,
+  html[data-app-platform="windows"][data-ui-mode="desktop"] .reports-table tbody tr:hover {
+    background: color-mix(in srgb, var(--color-primary) 4%, var(--color-surface));
+  }
+}
+
+html[data-ui-mode="mobile"] {
+  --mobile-bottom-nav-height: 74px;
+}
+
+html[data-ui-mode="mobile"] body {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html[data-ui-mode="mobile"] .mobile-page-shell,
+html[data-ui-mode="mobile"] .mpi-page,
+html[data-ui-mode="mobile"] .mh-page {
+  width: 100%;
+  max-width: 720px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+html[data-ui-mode="mobile"] input,
+html[data-ui-mode="mobile"] select,
+html[data-ui-mode="mobile"] textarea {
+  min-height: 46px;
+}
+
+html[data-ui-mode="mobile"] .mobile-bottom-nav {
+  min-height: calc(var(--mobile-bottom-nav-height) + var(--safe-area-bottom));
+  gap: 3px;
+  padding-top: 7px;
+  background: color-mix(in srgb, var(--color-mobile-nav) 94%, var(--color-background));
+}
+
+html[data-ui-mode="mobile"] .mobile-bottom-nav-item {
+  min-height: 56px;
+  border-radius: 13px;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    transform 90ms ease;
+}
+
+html[data-ui-mode="mobile"] .mobile-bottom-nav-icon {
+  width: 32px;
+  height: 29px;
+}
+
+html[data-ui-mode="mobile"] .mobile-bottom-nav-item-active .mobile-bottom-nav-icon {
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+
+html[data-ui-mode="mobile"] .mobile-bottom-nav-item:active,
+html[data-ui-mode="mobile"] .mobile-settings-action-card:active,
+html[data-ui-mode="mobile"] .mobile-more-compact-menu-item:active,
+html[data-ui-mode="mobile"] .mpi-product-card:active,
+html[data-ui-mode="mobile"] .mh-sale-card:active,
+html[data-ui-mode="mobile"] .mh-stock-card:active {
+  transform: scale(0.985);
+}
+
+html[data-ui-mode="mobile"] .mobile-settings-action-card,
+html[data-ui-mode="mobile"] .mobile-more-compact-menu-item,
+html[data-ui-mode="mobile"] .mpi-action-primary,
+html[data-ui-mode="mobile"] .mpi-action-secondary,
+html[data-ui-mode="mobile"] .mobile-product-add-button,
+html[data-ui-mode="mobile"] .mobile-product-save-button,
+html[data-ui-mode="mobile"] .mobile-stock-submit,
+html[data-ui-mode="mobile"] .mobile-sales-save-button {
+  min-height: 46px;
+}
+
+html[data-ui-mode="mobile"] .mpi-filter-strip,
+html[data-ui-mode="mobile"] .mh-periods,
+html[data-ui-mode="mobile"] .mobile-sales-periods,
+html[data-ui-mode="mobile"] .mobile-reports-periods {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+html[data-ui-mode="mobile"] .mpi-filter-strip::-webkit-scrollbar,
+html[data-ui-mode="mobile"] .mh-periods::-webkit-scrollbar,
+html[data-ui-mode="mobile"] .mobile-sales-periods::-webkit-scrollbar,
+html[data-ui-mode="mobile"] .mobile-reports-periods::-webkit-scrollbar {
+  display: none;
+}
+
+html[data-ui-mode="mobile"] .mpi-detail-sheet,
+html[data-ui-mode="mobile"] .mh-detail-sheet,
+html[data-ui-mode="mobile"] .mh-movement-sheet {
+  max-height: min(86dvh, 760px);
+  padding-bottom: max(16px, var(--safe-area-bottom));
+}
+
+html[data-ui-mode="mobile"] .mpi-sheet-scroll,
+html[data-ui-mode="mobile"] .mh-detail-items,
+html[data-ui-mode="mobile"] .mh-editor-items {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+html[data-app-platform="android"][data-ui-mode="mobile"] body {
+  overscroll-behavior: none;
+}
+
+html[data-app-platform="android"][data-ui-mode="mobile"] .mobile-bottom-nav {
+  backdrop-filter: blur(18px);
+}
+
+html[data-app-platform="android"][data-ui-mode="mobile"] .main-content {
+  padding-top: calc(var(--safe-area-top) + 8px);
+}
+
+html[data-app-platform="android"][data-ui-mode="mobile"] .mpi-detail-sheet,
+html[data-app-platform="android"][data-ui-mode="mobile"] .mh-detail-sheet,
+html[data-app-platform="android"][data-ui-mode="mobile"] .mh-movement-sheet {
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-ui-mode="mobile"] .mobile-bottom-nav-item,
+  html[data-ui-mode="mobile"] .mobile-settings-action-card,
+  html[data-ui-mode="mobile"] .mobile-more-compact-menu-item,
+  html[data-ui-mode="mobile"] .mpi-product-card,
+  html[data-ui-mode="mobile"] .mh-sale-card,
+  html[data-ui-mode="mobile"] .mh-stock-card {
+    transition: none;
+  }
+}

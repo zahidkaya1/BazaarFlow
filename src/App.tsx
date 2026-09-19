@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import MobileBottomNav from './components/layout/MobileBottomNav'
 import Sidebar from './components/layout/Sidebar'
 import PageLoading from './components/ui/PageLoading'
+import PlatformStyleController from './components/platform/PlatformStyleController'
 import RecoveryScheduler from './components/recovery/RecoveryScheduler'
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
@@ -21,6 +22,7 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 function App() {
   return (
     <div className="app-layout">
+      <PlatformStyleController />
       <RecoveryScheduler />
       <Sidebar />
 
