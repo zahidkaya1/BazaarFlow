@@ -70,6 +70,15 @@ type SaleDraftItem = {
     discountReason?: string
 }
 
+type SaleDayGroup = {
+    date: string
+    records: SaleHistoryRecord[]
+    salesCount: number
+    totalQuantity: number
+    revenueMinor: number
+    cancelledCount: number
+}
+
 function normalizeSearch(value: string): string {
     return value.trim().toLocaleLowerCase('tr-TR')
 }
@@ -134,6 +143,7 @@ function MobileHistoryPage() {
     const [period, setPeriod] = useState<HistoryPeriod>('30d')
     const [search, setSearch] = useState('')
     const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null)
+    const [selectedSaleDay, setSelectedSaleDay] = useState<string | null>(null)
     const [selectedMovementId, setSelectedMovementId] =
         useState<string | null>(null)
     const [feedback, setFeedback] = useState<FeedbackState>(null)
@@ -244,6 +254,44 @@ function MobileHistoryPage() {
         [sales, periodStart, query],
     )
 
+
+    const saleDayGroups = useMemo<SaleDayGroup[]>(() => {
+        const groups = new Map<string, SaleHistoryRecord[]>()
+
+        for (const record of filteredSales) {
+            const current = groups.get(record.sale.saleDate) ?? []
+            current.push(record)
+            groups.set(record.sale.saleDate, current)
+        }
+
+        return Array.from(groups.entries())
+            .sort(([firstDate], [secondDate]) =>
+                secondDate.localeCompare(firstDate),
+            )
+            .map(([date, records]) => ({
+                date,
+                records: records.sort((first, second) =>
+                    second.sale.createdAt.localeCompare(first.sale.createdAt),
+                ),
+                salesCount: records.length,
+                totalQuantity: records.reduce(
+                    (total, record) => total + record.totalQuantity,
+                    0,
+                ),
+                revenueMinor: records.reduce(
+                    (total, record) =>
+                        total +
+                        (record.sale.status === 'cancelled'
+                            ? 0
+                            : record.revenueMinor),
+                    0,
+                ),
+                cancelledCount: records.filter(
+                    (record) => record.sale.status === 'cancelled',
+                ).length,
+            }))
+    }, [filteredSales])
+
     const filteredMovements = useMemo(
         () =>
             stockMovements.filter((movement) => {
@@ -264,6 +312,9 @@ function MobileHistoryPage() {
 
     const selectedSale = selectedSaleId
         ? sales.find((record) => record.sale.id === selectedSaleId)
+        : undefined
+    const selectedSaleDayGroup = selectedSaleDay
+        ? saleDayGroups.find((group) => group.date === selectedSaleDay)
         : undefined
     const selectedMovement = selectedMovementId
         ? stockMovements.find((movement) => movement.id === selectedMovementId)
@@ -405,7 +456,7 @@ function MobileHistoryPage() {
     }
 
     return (
-        <div className="mobile-page-shell mh-page">
+        <div className="mobile-page-shell mobile-screen mobile-fixed-list-page mh-page">
             <MobilePageHeader title="Geçmiş" />
 
             {feedback && (
@@ -472,73 +523,49 @@ function MobileHistoryPage() {
             </div>
 
             {tab === 'sales' ? (
-                <section className="mh-list">
-                    {filteredSales.length === 0 ? (
+                <section className="mh-list mh-day-list">
+                    {saleDayGroups.length === 0 ? (
                         <div className="mh-empty">
                             <ReceiptText size={27} />
                             <strong>Satış kaydı bulunamadı</strong>
                             <span>Filtreleri değiştirerek tekrar deneyin.</span>
                         </div>
                     ) : (
-                        filteredSales.map((record) => (
+                        saleDayGroups.map((group) => (
                             <button
-                                key={record.sale.id}
+                                key={group.date}
                                 type="button"
-                                className={`mh-sale-card ${record.sale.status === 'cancelled' ? 'is-cancelled' : ''}`}
-                                onClick={() =>
-                                    setSelectedSaleId(record.sale.id)
-                                }
+                                className="mh-day-card"
+                                onClick={() => setSelectedSaleDay(group.date)}
                             >
-                                <div className="mh-card-topline">
-                                    <div>
-                                        <strong>
-                                            {formatDisplayDate(
-                                                record.sale.saleDate,
-                                            )}
-                                        </strong>
-                                        <span>
-                                            {formatCreatedTime(
-                                                record.sale.createdAt,
-                                            )}
-                                        </span>
-                                    </div>
-                                    <span
-                                        className={`mh-sale-status ${record.sale.status === 'cancelled' ? 'is-cancelled' : ''}`}
-                                    >
-                                        {record.sale.status === 'cancelled'
-                                            ? 'İptal'
-                                            : 'Tamamlandı'}
+                                <span className="mh-day-icon">
+                                    <CalendarDays size={18} />
+                                </span>
+
+                                <div className="mh-day-copy">
+                                    <strong>
+                                        {formatDisplayDate(group.date)}
+                                    </strong>
+                                    <span>
+                                        {group.salesCount} satış •{' '}
+                                        {group.totalQuantity} adet
                                     </span>
                                 </div>
 
-                                <div className="mh-sale-products">
-                                    {record.items
-                                        .slice(0, 2)
-                                        .map((item) => (
-                                            <span key={item.id}>
-                                                {item.productName} ×{' '}
-                                                {item.quantity}
-                                            </span>
-                                        ))}
-                                    {record.items.length > 2 && (
+                                <div className="mh-day-value">
+                                    <strong>
+                                        {formatMoneyFromMinor(
+                                            group.revenueMinor,
+                                        )}
+                                    </strong>
+                                    {group.cancelledCount > 0 && (
                                         <span>
-                                            +{record.items.length - 2} ürün
+                                            {group.cancelledCount} iptal
                                         </span>
                                     )}
                                 </div>
 
-                                <div className="mh-card-bottomline">
-                                    <span>
-                                        {record.totalQuantity} adet •{' '}
-                                        {record.items.length} kalem
-                                    </span>
-                                    <strong>
-                                        {formatMoneyFromMinor(
-                                            record.revenueMinor,
-                                        )}
-                                    </strong>
-                                    <ChevronRight size={17} />
-                                </div>
+                                <ChevronRight size={18} />
                             </button>
                         ))
                     )}
@@ -592,6 +619,98 @@ function MobileHistoryPage() {
                         ))
                     )}
                 </section>
+            )}
+
+            {selectedSaleDayGroup && (
+                <div
+                    className="mpi-sheet-backdrop"
+                    role="presentation"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget) {
+                            setSelectedSaleDay(null)
+                        }
+                    }}
+                >
+                    <section
+                        className="mpi-detail-sheet mh-day-sheet"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Günün satışları"
+                    >
+                        <div className="mpi-sheet-handle" />
+                        <header className="mpi-sheet-header">
+                            <div>
+                                <span>GÜNÜN SATIŞLARI</span>
+                                <h2>
+                                    {formatDisplayDate(
+                                        selectedSaleDayGroup.date,
+                                    )}
+                                </h2>
+                                <p>
+                                    {selectedSaleDayGroup.salesCount} satış •{' '}
+                                    {selectedSaleDayGroup.totalQuantity} adet •{' '}
+                                    {formatMoneyFromMinor(
+                                        selectedSaleDayGroup.revenueMinor,
+                                    )}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                className="pi-icon-button"
+                                aria-label="Günün satışlarını kapat"
+                                onClick={() => setSelectedSaleDay(null)}
+                            >
+                                <X size={19} />
+                            </button>
+                        </header>
+
+                        <div className="mpi-sheet-scroll mh-day-sheet-scroll">
+                            <div className="mh-day-sale-list">
+                                {selectedSaleDayGroup.records.map((record) => (
+                                    <button
+                                        key={record.sale.id}
+                                        type="button"
+                                        className={`mh-day-sale-row ${record.sale.status === 'cancelled' ? 'is-cancelled' : ''}`}
+                                        onClick={() => {
+                                            setSelectedSaleDay(null)
+                                            setSelectedSaleId(record.sale.id)
+                                        }}
+                                    >
+                                        <div className="mh-day-sale-main">
+                                            <strong>
+                                                {formatCreatedTime(
+                                                    record.sale.createdAt,
+                                                )}
+                                            </strong>
+                                            <span>
+                                                {record.totalQuantity} adet •{' '}
+                                                {record.items.length} kalem
+                                            </span>
+                                        </div>
+
+                                        <div className="mh-day-sale-value">
+                                            <strong>
+                                                {formatMoneyFromMinor(
+                                                    record.revenueMinor,
+                                                )}
+                                            </strong>
+                                            <span
+                                                className={`mh-sale-status ${record.sale.status === 'cancelled' ? 'is-cancelled' : ''}`}
+                                            >
+                                                {record.sale.status ===
+                                                'cancelled'
+                                                    ? 'İptal'
+                                                    : 'Tamamlandı'}
+                                            </span>
+                                        </div>
+
+                                        <ChevronRight size={17} />
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+                </div>
             )}
 
             {selectedSale && (

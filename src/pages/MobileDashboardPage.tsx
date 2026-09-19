@@ -156,12 +156,10 @@ function MobileDashboardPage() {
         )
 
     return (
-        <div className="mobile-page-shell">
-            <MobilePageHeader
-                title="Genel Bakış"
-                description="Bugünün satış ve stok durumunu hızlıca kontrol edin."
-            />
+        <div className="mobile-page-shell mobile-screen mobile-dashboard-page">
+            <MobilePageHeader title="Genel Bakış" />
 
+            <div className="mobile-page-scroll">
             <section className="mobile-dashboard-summary-grid">
                 <article className="mobile-dashboard-summary-card">
                     <span className="mobile-dashboard-summary-icon">
@@ -369,7 +367,7 @@ function MobileDashboardPage() {
                     </div>
 
                     <Link
-                        to="/sales-history"
+                        to="/history"
                         className="mobile-dashboard-section-link"
                     >
                         Tümü
@@ -472,6 +470,7 @@ function MobileDashboardPage() {
                     </div>
                 )}
             </section>
+            </div>
         </div>
     )
 }

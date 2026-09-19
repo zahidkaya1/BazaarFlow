@@ -282,7 +282,7 @@ function RecoveryPage() {
     }
 
     return (
-        <section className="data-center-page">
+        <section className="data-center-page mobile-screen">
             <header className="data-center-header">
                 <button
                     type="button"
@@ -325,6 +325,7 @@ function RecoveryPage() {
                 </div>
             </header>
 
+            <div className="mobile-page-scroll data-center-scroll">
             {status && (
                 <SettingsStatusCard
                     status={status}
@@ -422,6 +423,7 @@ function RecoveryPage() {
                     </div>
                 )}
             </section>
+            </div>
 
             <ConfirmDialog
                 open={selectedPoint !== null}

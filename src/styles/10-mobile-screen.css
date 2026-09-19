@@ -1,0 +1,428 @@
+/* BazaarFlow — Mobile screen model
+ *
+ * Mobilde uygulamanın kendisi kaymaz: üst başlık ve alt navigasyon sabittir.
+ * Sayfanın veri alanı kendi içinde kayar. Hızlı Satış mevcut POS davranışını
+ * korur; Ürünler & Stok ile Geçmiş'te yalnızca kayıt listesi kayar.
+ */
+
+/* Hızlı Satış mobil başlığı yalnızca dar/mobile yüzeyde görünür. */
+.quick-sale-mobile-title {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  html[data-ui-mode="mobile"],
+  html[data-ui-mode="mobile"] body,
+  html[data-ui-mode="mobile"] #root,
+  html[data-ui-mode="mobile"] .app-layout {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  html[data-ui-mode="mobile"] body {
+    height: 100dvh;
+  }
+
+  html[data-ui-mode="mobile"] .main-content {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  html[data-ui-mode="mobile"] .mobile-screen {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-bottom: 0;
+  }
+
+  /* Mobilde marka tekrarını ve yardımcı açıklamaları kaldır. */
+  html[data-ui-mode="mobile"] .page-eyebrow {
+    display: none;
+  }
+
+  html[data-ui-mode="mobile"] .mobile-page-header {
+    flex: 0 0 auto;
+    margin: 0 0 10px;
+    padding: 0 1px;
+  }
+
+  html[data-ui-mode="mobile"] .mobile-page-header h1 {
+    margin: 0;
+    font-size: 22px;
+    line-height: 1.15;
+    letter-spacing: -0.38px;
+  }
+
+  html[data-ui-mode="mobile"] .mobile-page-header p {
+    display: none;
+  }
+
+  html[data-ui-mode="mobile"] .quick-sale-mobile-title {
+    display: block;
+    flex: 0 0 auto;
+    margin: 0 0 10px;
+    padding: 0 1px;
+  }
+
+  html[data-ui-mode="mobile"] .quick-sale-mobile-title h1 {
+    margin: 0;
+    color: var(--color-text);
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.38px;
+  }
+
+  /* Standart mobil sayfalarda tek kaydırılabilir içerik yüzeyi. */
+  html[data-ui-mode="mobile"] .mobile-page-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    scroll-padding-top: 6px;
+    scroll-padding-bottom: 18px;
+    padding-bottom: 14px;
+  }
+
+  html[data-ui-mode="mobile"] .mobile-page-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Ürünler & Stok / Geçmiş: araçlar ekranda kalır, sadece sonuç listesi kayar. */
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page > .mpi-list,
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page > .mh-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 1px 1px 14px;
+  }
+
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page > .mpi-list::-webkit-scrollbar,
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page > .mh-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Ürün listesi kendi içinde 3 kartlık dikey slider gibi davranır.
+     Kartlar tam görünür, kaydırma bir sonraki karta temiz biçimde oturur. */
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page.mpi-page > .mpi-list {
+    gap: 8px;
+    padding: 1px;
+    scroll-snap-type: y mandatory;
+    scroll-padding-block: 1px;
+  }
+
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page.mpi-page > .mpi-list > .mpi-product-card {
+    flex: 0 0 calc((100% - 16px) / 3);
+    min-height: 116px;
+    display: flex;
+    flex-direction: column;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page.mpi-page .mpi-card-main {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page.mpi-page .mpi-card-heading {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding-top: 9px;
+    padding-bottom: 9px;
+  }
+
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page.mpi-page .mpi-card-metrics {
+    flex: 0 0 auto;
+  }
+
+  /* Kart içindeki ikincil butonları listeden kaldırıyoruz; kartın kendisi
+     detay ekranını açıyor ve Stok Ekle zaten üst araç çubuğunda mevcut. */
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page.mpi-page .mpi-card-actions {
+    display: none;
+  }
+
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page.mpi-page .mpi-hero {
+    flex: 0 0 auto;
+    min-height: 54px;
+    margin-bottom: 7px;
+    padding: 9px 11px;
+  }
+
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page.mpi-page .mpi-hero strong {
+    font-size: 15px;
+    line-height: 1.2;
+  }
+
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page.mpi-page .mpi-hero small {
+    margin-top: 1px;
+    font-size: 9.5px;
+  }
+
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page.mpi-page .mpi-category-button {
+    width: 40px;
+    height: 40px;
+  }
+
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page .mpi-actions {
+    flex: 0 0 auto;
+    margin-bottom: 7px;
+  }
+
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page .mpi-action-primary,
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page .mpi-action-secondary {
+    min-height: 42px;
+  }
+
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page .mpi-search,
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page .mh-search {
+    flex: 0 0 auto;
+    min-height: 42px;
+    margin-bottom: 7px;
+  }
+
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page .mpi-filter-strip,
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page .mh-periods {
+    flex: 0 0 auto;
+    padding-bottom: 7px;
+  }
+
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page .mpi-filter-strip button,
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page .mh-periods button {
+    min-height: 33px;
+  }
+
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page.mh-page .mh-tabs {
+    flex: 0 0 auto;
+    margin-bottom: 7px;
+  }
+
+  html[data-ui-mode="mobile"] .mobile-fixed-list-page.mh-page .mh-tabs button {
+    min-height: 39px;
+  }
+
+  /* Raporlarda dönem seçimi sabit kalır, rapor gövdesi kayar. */
+  html[data-ui-mode="mobile"] .mobile-reports-page > .mobile-reports-periods {
+    flex: 0 0 auto;
+    margin-bottom: 8px;
+  }
+
+  html[data-ui-mode="mobile"] .mobile-reports-page .mobile-page-scroll {
+    padding-top: 1px;
+  }
+
+  /* Veriler / Yedekler de aynı mobil ekran modeline girer. */
+  html[data-ui-mode="mobile"] .data-center-page.mobile-screen {
+    max-width: var(--layout-mobile-max);
+    margin: 0 auto;
+    padding: 4px 0 0;
+  }
+
+  html[data-ui-mode="mobile"] .data-center-page.mobile-screen > .data-center-header {
+    flex: 0 0 auto;
+    margin-bottom: 10px;
+  }
+
+  html[data-ui-mode="mobile"] .data-center-page.mobile-screen .data-center-title-copy p {
+    display: none;
+  }
+
+  html[data-ui-mode="mobile"] .data-center-page.mobile-screen .data-center-title-copy h1 {
+    font-size: 22px;
+    line-height: 1.15;
+  }
+
+  html[data-ui-mode="mobile"] .data-center-scroll {
+    padding-bottom: 14px;
+  }
+
+  html[data-ui-mode="mobile"] .mobile-dashboard-page .mobile-page-scroll,
+  html[data-ui-mode="mobile"] .mobile-reports-page .mobile-page-scroll,
+  html[data-ui-mode="mobile"] .mobile-more-page .mobile-page-scroll,
+  html[data-ui-mode="mobile"] .mobile-settings-page .mobile-page-scroll {
+    padding-right: 1px;
+    padding-left: 1px;
+  }
+}
+
+/* Geçmiş / Satışlar: ana listeyi gün bazında özetler.
+   Çok yoğun günlerde 40-50 satış ana ekranı uzatmaz; güne dokununca
+   satışlar ayrı, kendi içinde kaydırılabilir bir sheet içinde açılır. */
+@media (max-width: 768px) {
+  html[data-ui-mode="mobile"] .mh-day-list {
+    gap: 8px;
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-card {
+    width: 100%;
+    min-height: 66px;
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr) auto 18px;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 11px;
+    border: 1px solid var(--color-border);
+    border-radius: 13px;
+    background: var(--color-surface);
+    color: inherit;
+    box-shadow: var(--shadow-card);
+    text-align: left;
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-card:active {
+    transform: scale(0.992);
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-icon {
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-success-border);
+    border-radius: 11px;
+    background: var(--color-primary-soft);
+    color: var(--color-secondary);
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-copy,
+  html[data-ui-mode="mobile"] .mh-day-value {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-copy {
+    gap: 3px;
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-copy strong {
+    overflow: hidden;
+    color: var(--color-text);
+    font-size: 11px;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-copy span {
+    color: var(--color-text-muted);
+    font-size: 8.5px;
+    line-height: 1.2;
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-value {
+    align-items: flex-end;
+    gap: 3px;
+    white-space: nowrap;
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-value strong {
+    color: var(--color-secondary);
+    font-size: 11px;
+    line-height: 1.2;
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-value span {
+    color: var(--color-text-muted);
+    font-size: 7.5px;
+    line-height: 1.2;
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-card > svg {
+    color: var(--color-text-soft);
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-sheet {
+    max-height: min(86dvh, 720px);
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-sheet-scroll {
+    min-height: 0;
+    padding-top: 4px;
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-sale-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-sale-row {
+    width: 100%;
+    min-height: 58px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto 18px;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 11px;
+    background: var(--color-surface);
+    color: inherit;
+    text-align: left;
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-sale-row.is-cancelled {
+    opacity: 0.62;
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-sale-main,
+  html[data-ui-mode="mobile"] .mh-day-sale-value {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-sale-main {
+    gap: 3px;
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-sale-main strong {
+    color: var(--color-text);
+    font-size: 11px;
+    line-height: 1.2;
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-sale-main span {
+    color: var(--color-text-muted);
+    font-size: 8px;
+    line-height: 1.2;
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-sale-value {
+    align-items: flex-end;
+    gap: 4px;
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-sale-value > strong {
+    color: var(--color-secondary);
+    font-size: 10.5px;
+    line-height: 1.2;
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-sale-row .mh-sale-status {
+    padding: 3px 6px;
+    font-size: 7px;
+  }
+
+  html[data-ui-mode="mobile"] .mh-day-sale-row > svg {
+    color: var(--color-text-soft);
+  }
+}

@@ -288,7 +288,7 @@ function MobileProductsInventoryPage() {
     )
 
     return (
-        <div className="mobile-page-shell mpi-page">
+        <div className="mobile-page-shell mobile-screen mobile-fixed-list-page mpi-page">
             <MobilePageHeader title="Ürünler & Stok" />
 
             {feedback && (
@@ -305,7 +305,6 @@ function MobileProductsInventoryPage() {
 
             <section className="mpi-hero">
                 <div>
-                    <span>STOK MERKEZİ</span>
                     <strong>{products.length} ürün</strong>
                     <small>{totalStock} adet toplam stok</small>
                 </div>

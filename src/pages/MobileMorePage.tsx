@@ -43,11 +43,10 @@ function MobileMorePage() {
     )
 
     return (
-        <div className="mobile-page-shell">
-            <MobilePageHeader
-                title="Daha Fazla"
-            />
+        <div className="mobile-page-shell mobile-screen mobile-more-page">
+            <MobilePageHeader title="Daha Fazla" />
 
+            <div className="mobile-page-scroll">
             <section className="mobile-more-compact-today">
                 <div className="mobile-more-compact-section-heading">
                     <div>
@@ -242,6 +241,7 @@ function MobileMorePage() {
                     </Link>
                 </div>
             </section>
+            </div>
         </div>
     )
 }

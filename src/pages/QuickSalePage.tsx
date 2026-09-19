@@ -628,6 +628,10 @@ function QuickSalePage() {
 
     return (
         <div className="dashboard quick-sale-page">
+            <header className="quick-sale-mobile-title" aria-label="Satış">
+                <h1>Satış</h1>
+            </header>
+
             <header className="page-header quick-sale-header">
                 <div>
                     <span className="page-eyebrow">

@@ -331,7 +331,7 @@ function BackupsPage() {
     }
 
     return (
-        <section className="data-center-page backup-center-page">
+        <section className="data-center-page backup-center-page mobile-screen">
             <header className="data-center-header backup-center-header">
                 <button
                     type="button"
@@ -364,6 +364,7 @@ function BackupsPage() {
                 )}
             </header>
 
+            <div className="mobile-page-scroll data-center-scroll">
             <input
                 ref={fileInputRef}
                 type="file"
@@ -478,6 +479,7 @@ function BackupsPage() {
                     </div>
                 )}
             </section>
+            </div>
 
             <ConfirmDialog
                 open={restoreTarget !== null}

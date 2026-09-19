@@ -13,12 +13,10 @@ function MobileSettingsPage() {
     const navigate = useNavigate()
 
     return (
-        <div className="mobile-page-shell">
-            <MobilePageHeader
-                title="Ayarlar"
-                description="BazaarFlow tercihleri ve veri yönetimi."
-            />
+        <div className="mobile-page-shell mobile-screen mobile-settings-page">
+            <MobilePageHeader title="Ayarlar" />
 
+            <div className="mobile-page-scroll">
             <section className="mobile-settings-section">
                 <div className="mobile-settings-section-title">
                     <span>Görünüm</span>
@@ -83,6 +81,7 @@ function MobileSettingsPage() {
                     </span>
                 </div>
             </section>
+            </div>
         </div>
     )
 }

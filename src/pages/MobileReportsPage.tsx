@@ -433,11 +433,8 @@ function MobileReportsPage() {
             : '0,0'
 
     return (
-        <div className="mobile-page-shell">
-            <MobilePageHeader
-                title="Raporlar"
-                description="Satış ve kârlılığı hızlıca takip edin."
-            />
+        <div className="mobile-page-shell mobile-screen mobile-reports-page">
+            <MobilePageHeader title="Raporlar" />
 
             <div
                 className="mobile-reports-periods"
@@ -473,6 +470,7 @@ function MobileReportsPage() {
                 ))}
             </div>
 
+            <div className="mobile-page-scroll">
             <div className="mobile-reports-range">
                 {formatDisplayDate(
                     reportRange.start,
@@ -703,6 +701,7 @@ function MobileReportsPage() {
                     </section>
                 </>
             )}
+            </div>
         </div>
     )
 }
