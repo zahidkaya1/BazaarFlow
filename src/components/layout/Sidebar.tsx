@@ -3,7 +3,6 @@ import {
     ChartNoAxesCombined,
     LayoutDashboard,
     ListPlus,
-    PackagePlus,
     ReceiptText,
     Settings,
     Zap,
@@ -33,12 +32,7 @@ const navigationItems = [
         icon: ReceiptText,
     },
     {
-        label: 'Stok',
-        path: '/inventory',
-        icon: PackagePlus,
-    },
-    {
-        label: 'Ürünler',
+        label: 'Ürünler & Stok',
         path: '/products',
         icon: Boxes,
     },
@@ -54,7 +48,20 @@ function Sidebar() {
         <aside className="sidebar">
             <div className="sidebar-brand">
                 <div className="brand-logo" aria-hidden="true">
-                    B
+                    <img
+                        src="/brand/bazaarflow-app-icon.png"
+                        alt=""
+                        width={42}
+                        height={42}
+                        draggable={false}
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            display: 'block',
+                            objectFit: 'cover',
+                            borderRadius: 'inherit',
+                        }}
+                    />
                 </div>
 
                 <div className="brand-text">
@@ -77,7 +84,9 @@ function Sidebar() {
                                 }`
                             }
                         >
-                            <Icon size={20} strokeWidth={1.8} />
+                            <span className="navigation-icon" aria-hidden="true">
+                                <Icon size={19} strokeWidth={1.9} />
+                            </span>
                             <span>{item.label}</span>
                         </NavLink>
                     )
@@ -92,7 +101,9 @@ function Sidebar() {
                         }`
                     }
                 >
-                    <Settings size={20} strokeWidth={1.8} />
+                    <span className="navigation-icon" aria-hidden="true">
+                        <Settings size={19} strokeWidth={1.9} />
+                    </span>
                     <span>Ayarlar</span>
                 </NavLink>
             </div>

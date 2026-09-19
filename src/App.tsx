@@ -8,8 +8,8 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const QuickSalePage = lazy(() => import('./pages/QuickSalePage'))
 const BulkSalePage = lazy(() => import('./pages/BulkSalePage'))
 const SalesHistoryPage = lazy(() => import('./pages/SalesHistoryPage'))
-const InventoryPage = lazy(() => import('./pages/InventoryPage'))
-const ProductsPage = lazy(() => import('./pages/ProductsPage'))
+const ProductsInventoryPage = lazy(() => import('./pages/ProductsInventoryPage'))
+const HistoryPage = lazy(() => import('./pages/HistoryPage'))
 const ReportsPage = lazy(() => import('./pages/ReportsPage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 const MobileMorePage = lazy(() => import('./pages/MobileMorePage'))
@@ -28,8 +28,9 @@ function App() {
             <Route path="/bulk-sale" element={<BulkSalePage />} />
             <Route path="/sales-history" element={<SalesHistoryPage />} />
             <Route path="/sales" element={<Navigate replace to="/sales-history" />} />
-            <Route path="/inventory" element={<InventoryPage />} />
-            <Route path="/products" element={<ProductsPage />} />
+            <Route path="/products" element={<ProductsInventoryPage />} />
+            <Route path="/inventory" element={<Navigate replace to="/products" />} />
+            <Route path="/history" element={<HistoryPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/more" element={<MobileMorePage />} />

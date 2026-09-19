@@ -1,15 +1,15 @@
 import {
     Boxes,
     Ellipsis,
-    PackagePlus,
+    History,
     Zap,
 } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 
 const mobileNavigationItems = [
     { label: 'Satış', path: '/quick-sale', icon: Zap },
-    { label: 'Stok', path: '/inventory', icon: PackagePlus },
-    { label: 'Ürünler', path: '/products', icon: Boxes },
+    { label: 'Ürün & Stok', path: '/products', icon: Boxes },
+    { label: 'Geçmiş', path: '/history', icon: History },
     { label: 'Daha Fazla', path: '/more', icon: Ellipsis },
 ]
 
@@ -30,8 +30,10 @@ function MobileBottomNav() {
                             }`
                         }
                     >
-                        <Icon size={22} strokeWidth={1.9} />
-                        <span>{item.label}</span>
+                        <span className="mobile-bottom-nav-icon" aria-hidden="true">
+                            <Icon size={21} strokeWidth={1.9} />
+                        </span>
+                        <span className="mobile-bottom-nav-label">{item.label}</span>
                     </NavLink>
                 )
             })}

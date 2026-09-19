@@ -1,5 +1,4 @@
 import {
-    Database,
     Download,
     FileCheck2,
     FileSpreadsheet,
@@ -691,7 +690,19 @@ function MobileSettingsPage() {
 
             <section className="mobile-settings-app-card">
                 <span className="mobile-settings-app-icon">
-                    <Database size={18} />
+                    <img
+                        src="/brand/bazaarflow-app-icon.png"
+                        alt=""
+                        width={22}
+                        height={22}
+                        draggable={false}
+                        style={{
+                            display: 'block',
+                            width: 22,
+                            height: 22,
+                            borderRadius: 7,
+                        }}
+                    />
                 </span>
 
                 <div>

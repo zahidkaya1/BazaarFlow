@@ -56,15 +56,6 @@ function MobileMorePage() {
                         </strong>
                     </div>
 
-                    <Link
-                        to="/"
-                        className="mobile-more-compact-inline-link"
-                    >
-                        Genel Bakış
-                        <ChevronRight
-                            size={14}
-                        />
-                    </Link>
                 </div>
 
                 <div className="mobile-more-compact-summary-grid">
@@ -149,31 +140,6 @@ function MobileMorePage() {
                 </span>
 
                 <div className="mobile-more-compact-menu-list">
-                    <Link
-                        to="/sales-history"
-                        className="mobile-more-compact-menu-item"
-                    >
-                        <span className="mobile-more-compact-menu-icon">
-                            <ReceiptText
-                                size={19}
-                            />
-                        </span>
-
-                        <div>
-                            <strong>
-                                Satış Geçmişi
-                            </strong>
-
-                            <span>
-                                Geçmiş işlemler
-                            </span>
-                        </div>
-
-                        <ChevronRight
-                            size={17}
-                        />
-                    </Link>
-
                     <Link
                         to="/reports"
                         className="mobile-more-compact-menu-item"
