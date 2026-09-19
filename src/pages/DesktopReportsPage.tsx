@@ -213,10 +213,10 @@ function renderTooltipMetricGrid(
                     style={{
                         padding: '8px 10px',
                         border:
-                            '1px solid #e2e8f0',
+                            '1px solid var(--color-border)',
                         borderRadius: 8,
                         background:
-                            '#f8fafc',
+                            'var(--color-surface-subtle)',
                     }}
                 >
                     <span
@@ -224,7 +224,7 @@ function renderTooltipMetricGrid(
                             display: 'block',
                             marginBottom: 3,
                             color:
-                                '#64748b',
+                                'var(--color-text-muted)',
                             fontSize: 11,
                         }}
                     >
@@ -235,7 +235,7 @@ function renderTooltipMetricGrid(
                         style={{
                             display: 'block',
                             color:
-                                '#0f172a',
+                                'var(--color-text)',
                             fontSize: 13,
                         }}
                     >
@@ -266,10 +266,10 @@ function TrendChartTooltip({
                 minWidth: 230,
                 padding: 12,
                 border:
-                    '1px solid #cbd5e1',
+                    '1px solid var(--color-border-strong)',
                 borderRadius: 12,
                 background:
-                    '#ffffff',
+                    'var(--color-surface)',
                 boxShadow:
                     '0 16px 40px rgba(15, 23, 42, 0.22)',
                 position: 'relative',
@@ -282,7 +282,7 @@ function TrendChartTooltip({
                     display: 'block',
                     marginBottom: 2,
                     color:
-                        '#0f172a',
+                        'var(--color-text)',
                 }}
             >
                 {point.detailLabel}
@@ -291,7 +291,7 @@ function TrendChartTooltip({
             <small
                 style={{
                     color:
-                        '#64748b',
+                        'var(--color-text-muted)',
                 }}
             >
                 Detayı sabitlemek için grafiğe tıklayın.
@@ -368,10 +368,10 @@ function ProductChartTooltip({
                 minWidth: 240,
                 padding: 12,
                 border:
-                    '1px solid #cbd5e1',
+                    '1px solid var(--color-border-strong)',
                 borderRadius: 12,
                 background:
-                    '#ffffff',
+                    'var(--color-surface)',
                 boxShadow:
                     '0 16px 40px rgba(15, 23, 42, 0.22)',
                 position: 'relative',
@@ -383,7 +383,7 @@ function ProductChartTooltip({
                 style={{
                     display: 'block',
                     color:
-                        '#0f172a',
+                        'var(--color-text)',
                 }}
             >
                 {point.productName}
@@ -394,7 +394,7 @@ function ProductChartTooltip({
                     display: 'block',
                     marginTop: 2,
                     color:
-                        '#64748b',
+                        'var(--color-text-muted)',
                 }}
             >
                 {point.sku
@@ -407,7 +407,7 @@ function ProductChartTooltip({
                     display: 'block',
                     marginTop: 4,
                     color:
-                        '#64748b',
+                        'var(--color-text-muted)',
                 }}
             >
                 Detayı sabitlemek için ürüne tıklayın.
@@ -2130,6 +2130,7 @@ function DesktopReportsPage() {
                                         barGap={5}
                                     >
                                         <CartesianGrid
+                                            stroke="var(--color-border)"
                                             strokeDasharray="3 3"
                                             vertical={false}
                                         />
@@ -2142,6 +2143,7 @@ function DesktopReportsPage() {
                                             minTickGap={8}
                                             tick={{
                                                 fontSize: 10,
+                                                fill: 'var(--color-text-muted)',
                                             }}
                                             tickLine={false}
                                             axisLine={false}
@@ -2155,6 +2157,7 @@ function DesktopReportsPage() {
                                             }
                                             tick={{
                                                 fontSize: 10,
+                                                fill: 'var(--color-text-muted)',
                                             }}
                                             tickLine={false}
                                             axisLine={false}
@@ -2164,7 +2167,7 @@ function DesktopReportsPage() {
                                         <Tooltip
                                             cursor={{
                                                 fill:
-                                                    'rgba(15, 23, 42, 0.035)',
+                                                    'var(--color-chart-cursor)',
                                             }}
                                             wrapperStyle={{
                                                 zIndex: 1000,
@@ -2230,6 +2233,7 @@ function DesktopReportsPage() {
                                         }}
                                     >
                                         <CartesianGrid
+                                            stroke="var(--color-border)"
                                             strokeDasharray="3 3"
                                             vertical={false}
                                         />
@@ -2242,6 +2246,7 @@ function DesktopReportsPage() {
                                             minTickGap={8}
                                             tick={{
                                                 fontSize: 10,
+                                                fill: 'var(--color-text-muted)',
                                             }}
                                             tickLine={false}
                                             axisLine={false}
@@ -2255,6 +2260,7 @@ function DesktopReportsPage() {
                                             }
                                             tick={{
                                                 fontSize: 10,
+                                                fill: 'var(--color-text-muted)',
                                             }}
                                             tickLine={false}
                                             axisLine={false}
@@ -2264,7 +2270,7 @@ function DesktopReportsPage() {
                                         <Tooltip
                                             cursor={{
                                                 stroke:
-                                                    'rgba(15, 23, 42, 0.20)',
+                                                    'var(--color-chart-cursor-strong)',
                                                 strokeDasharray:
                                                     '4 4',
                                             }}
@@ -2505,6 +2511,7 @@ function DesktopReportsPage() {
                                     }}
                                 >
                                     <CartesianGrid
+                                        stroke="var(--color-border)"
                                         strokeDasharray="3 3"
                                         vertical={false}
                                     />
@@ -2518,6 +2525,7 @@ function DesktopReportsPage() {
                                         height={44}
                                         tick={{
                                             fontSize: 10,
+                                            fill: 'var(--color-text-muted)',
                                         }}
                                         tickLine={false}
                                         axisLine={false}
@@ -2531,6 +2539,7 @@ function DesktopReportsPage() {
                                         }
                                         tick={{
                                             fontSize: 10,
+                                            fill: 'var(--color-text-muted)',
                                         }}
                                         tickLine={false}
                                         axisLine={false}
@@ -2540,7 +2549,7 @@ function DesktopReportsPage() {
                                     <Tooltip
                                         cursor={{
                                             fill:
-                                                'rgba(15, 23, 42, 0.035)',
+                                                'var(--color-chart-cursor)',
                                         }}
                                         wrapperStyle={{
                                             zIndex: 1000,

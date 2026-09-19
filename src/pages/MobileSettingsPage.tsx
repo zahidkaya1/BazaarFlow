@@ -1,11 +1,13 @@
 import {
-    ChevronRight,
     ArchiveRestore,
+    ChevronRight,
     Info,
+    Palette,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 import MobilePageHeader from '../components/mobile/MobilePageHeader'
+import ThemeSelector from '../components/settings/ThemeSelector'
 
 function MobileSettingsPage() {
     const navigate = useNavigate()
@@ -16,6 +18,29 @@ function MobileSettingsPage() {
                 title="Ayarlar"
                 description="BazaarFlow tercihleri ve veri yönetimi."
             />
+
+            <section className="mobile-settings-section">
+                <div className="mobile-settings-section-title">
+                    <span>Görünüm</span>
+                </div>
+
+                <div className="mobile-settings-theme-card">
+                    <div className="mobile-settings-theme-heading">
+                        <span className="mobile-settings-action-icon">
+                            <Palette size={19} />
+                        </span>
+
+                        <span className="mobile-settings-action-copy">
+                            <strong>Tema</strong>
+                            <small>
+                                Sistem, açık veya koyu görünüm
+                            </small>
+                        </span>
+                    </div>
+
+                    <ThemeSelector compact />
+                </div>
+            </section>
 
             <section className="mobile-settings-section">
                 <div className="mobile-settings-section-title">

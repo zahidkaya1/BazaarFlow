@@ -12,8 +12,36 @@
     content="BazaarFlow; ürün, stok, satış, FIFO maliyet ve kârlılık takibi için local-first bir uygulamadır."
   />
   <meta name="application-name" content="BazaarFlow" />
-  <meta name="theme-color" content="#0ab0a9" />
-  <meta name="color-scheme" content="light" />
+  <meta name="theme-color" content="#f7f9f8" />
+  <meta name="color-scheme" content="light dark" />
+  <script>
+    (() => {
+      const storageKey = 'bazaarflow.theme'
+      let preference = 'system'
+
+      try {
+        const storedValue = localStorage.getItem(storageKey)
+        if (storedValue === 'light' || storedValue === 'dark' || storedValue === 'system') {
+          preference = storedValue
+        }
+      } catch {
+        preference = 'system'
+      }
+
+      const systemDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false
+      const resolvedTheme = preference === 'system'
+        ? (systemDark ? 'dark' : 'light')
+        : preference
+
+      document.documentElement.dataset.theme = resolvedTheme
+      document.documentElement.dataset.themePreference = preference
+      document.documentElement.style.colorScheme = resolvedTheme
+      document.querySelector('meta[name="theme-color"]')?.setAttribute(
+        'content',
+        resolvedTheme === 'dark' ? '#0b1110' : '#f7f9f8',
+      )
+    })()
+  </script>
 
   <link rel="icon" href="/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />

@@ -2,9 +2,12 @@ import {
     ArrowRight,
     ArchiveRestore,
     Info,
+    Palette,
     ShieldCheck,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+
+import ThemeSelector from '../components/settings/ThemeSelector'
 
 function DesktopSettingsPage() {
     const navigate = useNavigate()
@@ -32,7 +35,7 @@ function DesktopSettingsPage() {
                     </div>
 
                     <div className="settings-panel-content">
-                        <div className="settings-feature-list">
+                        <div className="settings-feature-list settings-feature-list-single">
                             <span>
                                 <ShieldCheck size={15} />
                                 Veriler otomatik korunur
@@ -55,6 +58,22 @@ function DesktopSettingsPage() {
                             Verileri Aç
                             <ArrowRight size={16} />
                         </button>
+                    </div>
+                </article>
+
+                <article className="dashboard-panel settings-theme-panel">
+                    <div className="panel-header">
+                        <div>
+                            <h2>Görünüm</h2>
+                            <p>
+                                Uygulamanın açık veya koyu görünümünü seçin.
+                            </p>
+                        </div>
+                        <Palette size={20} />
+                    </div>
+
+                    <div className="settings-panel-content">
+                        <ThemeSelector />
                     </div>
                 </article>
 
