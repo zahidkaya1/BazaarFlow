@@ -1,6 +1,7 @@
 import { db } from '../db/database'
 import type { Product } from '../types/product'
 import { createId } from '../utils/createId'
+import { recoveryService } from './recoveryService'
 
 export type CreateProductInput = {
     name: string
@@ -247,6 +248,18 @@ export const productService = {
     },
 
     async deletePermanently(id: string): Promise<void> {
+        const precheck = await getDeletionCheck(id)
+
+        if (!precheck.canDelete) {
+            throw new Error(
+                precheck.reason ?? 'Ürün kalıcı olarak silinemiyor.',
+            )
+        }
+
+        await recoveryService.createActionPoint(
+            'Ürün kalıcı silinmeden önce',
+        )
+
         await db.transaction(
             'rw',
             db.products,

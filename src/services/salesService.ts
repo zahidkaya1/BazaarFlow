@@ -4,6 +4,7 @@ import type {
     SaleItem,
 } from '../types/sale'
 import { createId } from '../utils/createId'
+import { recoveryService } from './recoveryService'
 import {
     rebuildFifoStateInCurrentTransaction,
     tryAllocateSaleIncrementallyInCurrentTransaction,
@@ -1027,6 +1028,28 @@ export const salesService = {
             input.items,
         )
 
+        const saleBeforeUpdate =
+            await db.sales.get(id)
+
+        if (!saleBeforeUpdate) {
+            throw new Error(
+                'Düzenlenecek satış bulunamadı.',
+            )
+        }
+
+        if (
+            saleBeforeUpdate.status ===
+            'cancelled'
+        ) {
+            throw new Error(
+                'İptal edilmiş satış düzenlenemez.',
+            )
+        }
+
+        await recoveryService.createActionPoint(
+            'Satış düzenlemesinden önce',
+        )
+
         return db.transaction(
             'rw',
             [
@@ -1107,6 +1130,26 @@ export const salesService = {
     async cancel(
         id: string,
     ): Promise<Sale> {
+        const saleBeforeCancel =
+            await db.sales.get(id)
+
+        if (!saleBeforeCancel) {
+            throw new Error(
+                'İptal edilecek satış bulunamadı.',
+            )
+        }
+
+        if (
+            saleBeforeCancel.status ===
+            'cancelled'
+        ) {
+            return saleBeforeCancel
+        }
+
+        await recoveryService.createActionPoint(
+            'Satış iptalinden önce',
+        )
+
         return db.transaction(
             'rw',
             [

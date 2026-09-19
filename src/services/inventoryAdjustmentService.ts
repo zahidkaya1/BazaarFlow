@@ -5,6 +5,7 @@ import type {
 } from '../types/inventoryAdjustment'
 import type { InventoryLot } from '../types/inventoryLot'
 import { createId } from '../utils/createId'
+import { recoveryService } from './recoveryService'
 import { rebuildFifoStateInCurrentTransaction } from './fifoService'
 
 export type CreateInventoryAdjustmentInput = {
@@ -295,6 +296,10 @@ export const inventoryAdjustmentService = {
                 input.unitCostMinor,
             )
         }
+
+        await recoveryService.createActionPoint(
+            'Stok düzeltmesinden önce',
+        )
 
         return db.transaction(
             'rw',

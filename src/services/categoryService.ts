@@ -1,6 +1,7 @@
 import { db } from '../db/database'
 import type { Category } from '../types/category'
 import { createId } from '../utils/createId'
+import { recoveryService } from './recoveryService'
 
 export type CreateCategoryInput = {
     name: string
@@ -156,6 +157,18 @@ export const categoryService = {
     },
 
     async deletePermanently(id: string): Promise<void> {
+        const precheck = await getDeletionCheck(id)
+
+        if (!precheck.canDelete) {
+            throw new Error(
+                precheck.reason ?? 'Kategori kalıcı olarak silinemiyor.',
+            )
+        }
+
+        await recoveryService.createActionPoint(
+            'Kategori kalıcı silinmeden önce',
+        )
+
         await db.transaction('rw', db.categories, db.products, async () => {
             const check = await getDeletionCheck(id)
 

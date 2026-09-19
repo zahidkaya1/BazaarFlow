@@ -219,6 +219,21 @@ function validateBackup(
         )
     }
 
+    if (
+        value.data.appSettings !== undefined
+    ) {
+        if (!Array.isArray(value.data.appSettings)) {
+            throw new Error(
+                'Yedek dosyasındaki ayarlar bölümü geçersiz.',
+            )
+        }
+
+        assertRowsHaveValidIds(
+            value.data.appSettings,
+            'appSettings',
+        )
+    }
+
     const backup = value as BazaarFlowBackup
 
     validateBackupReferences(backup)
@@ -238,6 +253,7 @@ function createBackupFilename(
 
 async function createBackup(): Promise<BazaarFlowBackup> {
     const [
+        appSettings,
         categories,
         products,
         inventoryLots,
@@ -245,6 +261,7 @@ async function createBackup(): Promise<BazaarFlowBackup> {
         saleItems,
         inventoryAdjustments,
     ] = await Promise.all([
+        db.appSettings.toArray(),
         db.categories.toArray(),
         db.products.toArray(),
         db.inventoryLots.toArray(),
@@ -260,6 +277,7 @@ async function createBackup(): Promise<BazaarFlowBackup> {
         databaseVersion: db.verno,
         exportedAt: new Date().toISOString(),
         data: {
+            appSettings,
             categories,
             products,
             inventoryLots,
@@ -346,6 +364,7 @@ async function restoreBackup(
     await db.transaction(
         'rw',
         [
+            db.appSettings,
             db.categories,
             db.products,
             db.inventoryLots,
@@ -366,12 +385,22 @@ async function restoreBackup(
              */
             await db.inventoryAdjustmentAllocations.clear()
             await db.inventoryAllocations.clear()
+            await db.appSettings.clear()
             await db.saleItems.clear()
             await db.sales.clear()
             await db.inventoryAdjustments.clear()
             await db.inventoryLots.clear()
             await db.products.clear()
             await db.categories.clear()
+
+            if (
+                backup.data.appSettings &&
+                backup.data.appSettings.length > 0
+            ) {
+                await db.appSettings.bulkAdd(
+                    backup.data.appSettings,
+                )
+            }
 
             if (backup.data.categories.length > 0) {
                 await db.categories.bulkAdd(

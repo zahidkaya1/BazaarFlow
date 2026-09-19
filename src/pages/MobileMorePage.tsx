@@ -3,6 +3,7 @@ import {
     BarChart3,
     ChevronRight,
     CircleDollarSign,
+    ArchiveRestore,
     LayoutDashboard,
     PackageCheck,
     ReceiptText,
@@ -191,6 +192,31 @@ function MobileMorePage() {
                     </Link>
 
                     <Link
+                        to="/data"
+                        className="mobile-more-compact-menu-item"
+                    >
+                        <span className="mobile-more-compact-menu-icon">
+                            <ArchiveRestore
+                                size={19}
+                            />
+                        </span>
+
+                        <div>
+                            <strong>
+                                Veriler
+                            </strong>
+
+                            <span>
+                                Kayıtlar ve yedekler
+                            </span>
+                        </div>
+
+                        <ChevronRight
+                            size={17}
+                        />
+                    </Link>
+
+                    <Link
                         to="/settings"
                         className="mobile-more-compact-menu-item"
                     >
@@ -206,7 +232,7 @@ function MobileMorePage() {
                             </strong>
 
                             <span>
-                                Yedekleme ve dışa aktarma
+                                Uygulama tercihleri
                             </span>
                         </div>
 
