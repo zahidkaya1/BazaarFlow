@@ -6,6 +6,7 @@ import {
 
 import { themeService } from '../../services/themeService'
 import type {
+    ColorTheme,
     ResolvedTheme,
     ThemePreference,
 } from '../../types/theme'
@@ -22,6 +23,11 @@ function ThemeProvider({
     const [preference, setPreferenceState] =
         useState<ThemePreference>(() =>
             themeService.getThemePreference(),
+        )
+
+    const [colorTheme, setColorThemeState] =
+        useState<ColorTheme>(() =>
+            themeService.getColorTheme(),
         )
 
     const [systemTheme, setSystemTheme] =
@@ -71,8 +77,9 @@ function ThemeProvider({
         themeService.applyThemeToDocument(
             preference,
             resolvedTheme,
+            colorTheme,
         )
-    }, [preference, resolvedTheme])
+    }, [preference, resolvedTheme, colorTheme])
 
     const setPreference = (
         nextPreference: ThemePreference,
@@ -83,10 +90,19 @@ function ThemeProvider({
         setPreferenceState(nextPreference)
     }
 
+    const setColorTheme = (
+        nextColorTheme: ColorTheme,
+    ) => {
+        themeService.saveColorTheme(nextColorTheme)
+        setColorThemeState(nextColorTheme)
+    }
+
     const value: ThemeContextValue = {
         preference,
         resolvedTheme,
+        colorTheme,
         setPreference,
+        setColorTheme,
     }
 
     return (

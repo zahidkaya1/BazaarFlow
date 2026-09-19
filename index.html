@@ -17,15 +17,33 @@
   <script>
     (() => {
       const storageKey = 'bazaarflow.theme'
+      const colorStorageKey = 'bazaarflow.colorTheme'
+      const validColors = new Set([
+        'bazaarflow',
+        'ocean',
+        'indigo',
+        'violet',
+        'rose',
+        'sunset',
+        'graphite',
+      ])
+
       let preference = 'system'
+      let colorTheme = 'bazaarflow'
 
       try {
         const storedValue = localStorage.getItem(storageKey)
         if (storedValue === 'light' || storedValue === 'dark' || storedValue === 'system') {
           preference = storedValue
         }
+
+        const storedColor = localStorage.getItem(colorStorageKey)
+        if (validColors.has(storedColor)) {
+          colorTheme = storedColor
+        }
       } catch {
         preference = 'system'
+        colorTheme = 'bazaarflow'
       }
 
       const systemDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false
@@ -35,6 +53,7 @@
 
       document.documentElement.dataset.theme = resolvedTheme
       document.documentElement.dataset.themePreference = preference
+      document.documentElement.dataset.colorTheme = colorTheme
       document.documentElement.style.colorScheme = resolvedTheme
       document.querySelector('meta[name="theme-color"]')?.setAttribute(
         'content',
