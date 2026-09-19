@@ -5,6 +5,7 @@ import Sidebar from './components/layout/Sidebar'
 import PageLoading from './components/ui/PageLoading'
 import PlatformStyleController from './components/platform/PlatformStyleController'
 import RecoveryScheduler from './components/recovery/RecoveryScheduler'
+import WebExperienceController from './components/web/WebExperienceController'
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const QuickSalePage = lazy(() => import('./pages/QuickSalePage'))
@@ -23,6 +24,7 @@ function App() {
   return (
     <div className="app-layout">
       <PlatformStyleController />
+      <WebExperienceController />
       <RecoveryScheduler />
       <Sidebar />
 

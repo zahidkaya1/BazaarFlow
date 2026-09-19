@@ -1,0 +1,162 @@
+/* BazaarFlow — Web tarayıcı / PWA polish */
+
+/*
+ * Native Tauri yüzeylerine dokunmadan web tarayıcı deneyimini düzenler.
+ * data-app-platform="web" PlatformStyleController tarafından atanır.
+ */
+
+html[data-app-platform="web"] {
+  scrollbar-gutter: stable;
+}
+
+html[data-app-platform="web"] body {
+  min-height: 100svh;
+}
+
+html[data-app-platform="web"] :is(
+    a,
+    button,
+    input,
+    select,
+    textarea,
+    [tabindex]:not([tabindex="-1"])
+  ):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+html[data-app-platform="web"][data-ui-mode="desktop"] .main-content {
+  min-width: 0;
+  padding:
+    clamp(28px, 2.7vw, 44px)
+    clamp(30px, 3.2vw, 54px)
+    58px;
+}
+
+html[data-app-platform="web"][data-ui-mode="desktop"] .dashboard {
+  max-width: var(--layout-content-max-wide);
+}
+
+html[data-app-platform="web"][data-ui-mode="desktop"] :is(
+    .product-table-wrapper,
+    .pi-table-wrapper,
+    .reports-table-panel,
+    .sales-history-table-wrapper
+  ) {
+  scrollbar-gutter: stable both-edges;
+}
+
+@media (min-width: 1700px) {
+  html[data-app-platform="web"][data-ui-mode="desktop"] .main-content {
+    padding-right: 64px;
+    padding-left: 64px;
+  }
+}
+
+/* Tablet / dar masaüstü web: sidebar korunur ama içerik nefes alır. */
+@media (min-width: 769px) and (max-width: 1100px) {
+  html[data-app-platform="web"][data-ui-mode="desktop"] {
+    --web-sidebar-width: 220px;
+  }
+
+  html[data-app-platform="web"][data-ui-mode="desktop"] .sidebar {
+    width: var(--web-sidebar-width);
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  html[data-app-platform="web"][data-ui-mode="desktop"] .main-content {
+    width: calc(100% - var(--web-sidebar-width));
+    margin-left: var(--web-sidebar-width);
+    padding: 26px 26px 46px;
+  }
+
+  html[data-app-platform="web"][data-ui-mode="desktop"] .navigation-item {
+    padding-right: 11px;
+    padding-left: 11px;
+  }
+}
+
+/* Dokunmatik web tabletlerinde hover yerine güvenli hedef boyutları. */
+@media (pointer: coarse) and (min-width: 769px) {
+  html[data-app-platform="web"] :is(
+      .primary-button,
+      .secondary-button,
+      .action-button,
+      .navigation-item,
+      .reports-period-button,
+      .theme-option,
+      .color-theme-option
+    ) {
+    min-height: 44px;
+  }
+}
+
+/* Mobil web tarayıcısı native Android'in overscroll davranışını taklit etmez. */
+html[data-app-platform="web"][data-ui-mode="mobile"] {
+  overscroll-behavior-y: auto;
+}
+
+html[data-app-platform="web"][data-ui-mode="mobile"] body {
+  min-height: 100svh;
+  overscroll-behavior-y: auto;
+}
+
+html[data-app-platform="web"][data-ui-mode="mobile"] .main-content {
+  min-height: 100svh;
+}
+
+html[data-app-platform="web"][data-ui-mode="mobile"] .mobile-bottom-nav {
+  padding-right: max(6px, var(--safe-area-right));
+  padding-left: max(6px, var(--safe-area-left));
+}
+
+/* Ana ekrana kurulmuş PWA'da ekran kenarları biraz daha uygulama gibi davranır. */
+html[data-app-platform="web"][data-web-display-mode="standalone"] body {
+  overscroll-behavior-y: none;
+}
+
+html[data-app-platform="web"][data-web-display-mode="standalone"][data-ui-mode="mobile"] .main-content {
+  padding-top: calc(var(--safe-area-top) + 10px);
+}
+
+/* Bağlantı koptuğunda teknik hata yerine küçük, pasif bir durum rozeti göster. */
+html[data-app-platform="web"][data-network-status="offline"] body::after {
+  content: "Çevrimdışı";
+  position: fixed;
+  z-index: 10000;
+  right: max(16px, var(--safe-area-right));
+  bottom: max(16px, var(--safe-area-bottom));
+  padding: 8px 12px;
+  border: 1px solid var(--color-warning-border);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-warning-soft) 94%, transparent);
+  color: var(--color-warning-text-strong);
+  box-shadow: var(--shadow-card);
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
+  backdrop-filter: blur(12px);
+}
+
+html[data-app-platform="web"][data-network-status="offline"][data-ui-mode="mobile"] body::after {
+  right: max(12px, var(--safe-area-right));
+  bottom: calc(var(--mobile-bottom-nav-height) + var(--safe-area-bottom) + 14px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-app-platform="web"][data-ui-mode="desktop"] .summary-card,
+  html[data-app-platform="web"][data-ui-mode="desktop"] .dashboard-panel {
+    transition:
+      border-color var(--motion-base) ease,
+      box-shadow var(--motion-base) ease;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    html[data-app-platform="web"][data-ui-mode="desktop"] .summary-card:hover,
+    html[data-app-platform="web"][data-ui-mode="desktop"] .dashboard-panel:hover {
+      border-color: color-mix(in srgb, var(--color-primary) 16%, var(--color-border));
+      box-shadow: var(--shadow-accent-soft), var(--shadow-card);
+    }
+  }
+}

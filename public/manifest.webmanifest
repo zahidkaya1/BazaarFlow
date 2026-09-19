@@ -1,0 +1,48 @@
+{
+  "name": "BazaarFlow — Satış & Stok Takibi",
+  "short_name": "BazaarFlow",
+  "description": "Ürün, stok, satış, FIFO maliyet ve kârlılık takibi için local-first uygulama.",
+  "lang": "tr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#f7f9f8",
+  "theme_color": "#0f766e",
+  "categories": ["business", "productivity", "finance"],
+  "icons": [
+    {
+      "src": "pwa-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "pwa-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Hızlı Satış",
+      "short_name": "Satış",
+      "url": "./quick-sale",
+      "icons": [{ "src": "pwa-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Ürünler & Stok",
+      "short_name": "Stok",
+      "url": "./products",
+      "icons": [{ "src": "pwa-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Raporlar",
+      "short_name": "Raporlar",
+      "url": "./reports",
+      "icons": [{ "src": "pwa-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}
