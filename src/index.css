@@ -87,6 +87,20 @@
   --color-chart-cursor: rgba(15, 23, 42, 0.035);
   --color-chart-cursor-strong: rgba(15, 23, 42, 0.20);
 
+  /* Tema kombinasyonları için ortak etkileşim renkleri */
+  --color-action: #0f766e;
+  --color-action-hover: #115e59;
+  --color-on-action: #ffffff;
+  --color-focus-ring: color-mix(in srgb, var(--color-accent) 22%, transparent);
+  --color-sidebar-active-bg: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  --color-sidebar-active-bg-hover: color-mix(in srgb, var(--color-accent) 24%, transparent);
+  --color-sidebar-active-text: color-mix(in srgb, var(--color-accent) 70%, #ffffff);
+  --color-overlay-soft: rgba(15, 23, 42, 0.24);
+  --shadow-floating: 0 24px 70px rgba(15, 23, 42, 0.18);
+  --shadow-side-panel: -18px 0 50px rgba(15, 23, 42, 0.12);
+  --shadow-bottom-nav: 0 -8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-accent-soft: 0 10px 28px color-mix(in srgb, var(--color-primary) 8%, transparent);
+
   --shadow-card:
     0 1px 2px rgba(15, 23, 42, 0.03),
     0 4px 12px rgba(15, 23, 42, 0.025);
@@ -156,6 +170,12 @@ html[data-theme="dark"] {
   --color-overlay: rgba(0, 0, 0, 0.62);
   --color-chart-cursor: rgba(226, 232, 240, 0.06);
   --color-chart-cursor-strong: rgba(226, 232, 240, 0.20);
+
+  --color-overlay-soft: rgba(0, 0, 0, 0.46);
+  --shadow-floating: 0 24px 70px rgba(0, 0, 0, 0.38);
+  --shadow-side-panel: -18px 0 50px rgba(0, 0, 0, 0.30);
+  --shadow-bottom-nav: 0 -8px 24px rgba(0, 0, 0, 0.28);
+  --shadow-accent-soft: 0 10px 28px color-mix(in srgb, var(--color-primary) 12%, transparent);
 
   --shadow-card:
     0 1px 2px rgba(0, 0, 0, 0.22),
@@ -11018,6 +11038,8 @@ html[data-color-theme="ocean"] {
   --color-brand-soft: #ecfeff;
   --color-sidebar: #102832;
   --color-sidebar-hover: #173b49;
+  --color-action: #0369a1;
+  --color-action-hover: #075985;
 }
 
 html[data-theme="dark"][data-color-theme="ocean"] {
@@ -11040,6 +11062,8 @@ html[data-color-theme="indigo"] {
   --color-brand-soft: #eef4ff;
   --color-sidebar: #181a38;
   --color-sidebar-hover: #25284f;
+  --color-action: #4338ca;
+  --color-action-hover: #3730a3;
 }
 
 html[data-theme="dark"][data-color-theme="indigo"] {
@@ -11062,6 +11086,8 @@ html[data-color-theme="violet"] {
   --color-brand-soft: #faf5ff;
   --color-sidebar: #291636;
   --color-sidebar-hover: #3b2050;
+  --color-action: #6d28d9;
+  --color-action-hover: #5b21b6;
 }
 
 html[data-theme="dark"][data-color-theme="violet"] {
@@ -11084,6 +11110,8 @@ html[data-color-theme="rose"] {
   --color-brand-soft: #fdf2f8;
   --color-sidebar: #35131e;
   --color-sidebar-hover: #4a1d2b;
+  --color-action: #be123c;
+  --color-action-hover: #9f1239;
 }
 
 html[data-theme="dark"][data-color-theme="rose"] {
@@ -11106,6 +11134,8 @@ html[data-color-theme="sunset"] {
   --color-brand-soft: #fffbeb;
   --color-sidebar: #352015;
   --color-sidebar-hover: #4b2c1a;
+  --color-action: #c2410c;
+  --color-action-hover: #9a3412;
 }
 
 html[data-theme="dark"][data-color-theme="sunset"] {
@@ -11128,6 +11158,8 @@ html[data-color-theme="graphite"] {
   --color-brand-soft: #f8fafc;
   --color-sidebar: #1e293b;
   --color-sidebar-hover: #334155;
+  --color-action: #475569;
+  --color-action-hover: #334155;
 }
 
 html[data-theme="dark"][data-color-theme="graphite"] {
@@ -11266,5 +11298,225 @@ html[data-theme="dark"][data-color-theme="graphite"] {
 @media (max-width: 390px) {
   .theme-selector-compact .color-theme-options {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+
+/* ===== 17. LIGHT / DARK + RENK TEMASI POLISH ===== */
+/*
+ * Kullanıcı hangi görünüm + renk kombinasyonunu seçerse seçsin aynı
+ * etkileşim hiyerarşisini korur. Özellikle koyu temadaki parlak accent
+ * renklerinin ana butonlarda kontrast kaybetmesini önler.
+ */
+
+::selection {
+  background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+  color: var(--color-text);
+}
+
+html {
+  scrollbar-color:
+    color-mix(in srgb, var(--color-text-soft) 55%, transparent)
+    var(--color-background);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background:
+    color-mix(in srgb, var(--color-text-soft) 55%, transparent)
+    padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background:
+    color-mix(in srgb, var(--color-text-muted) 72%, transparent)
+    padding-box;
+}
+
+/* Sidebar artık seçilen paleti gerçekten yansıtır; sabit turkuaz kalmaz. */
+.navigation-item-active {
+  background: var(--color-sidebar-active-bg);
+  color: var(--color-sidebar-active-text);
+}
+
+.navigation-item-active:hover {
+  background: var(--color-sidebar-active-bg-hover);
+  color: var(--color-sidebar-active-text);
+}
+
+.sidebar-footer {
+  border-top-color: color-mix(in srgb, var(--color-sidebar-text) 10%, transparent);
+}
+
+/* Ana CTA'lar koyu/açık temada aynı okunabilir kontrastı kullanır. */
+.primary-button,
+.reports-export-button,
+.quick-sale-product-count,
+.quick-sale-complete-button,
+.mobile-stock-submit,
+.mobile-product-add-button,
+.mobile-product-save-button,
+.pi-button-primary,
+.mpi-action-primary {
+  border-color: var(--color-action);
+  background: var(--color-action);
+  color: var(--color-on-action);
+}
+
+.primary-button:hover:not(:disabled),
+.reports-export-button:hover:not(:disabled),
+.quick-sale-complete-button:hover:not(:disabled),
+.mobile-stock-submit:hover:not(:disabled),
+.mobile-product-add-button:hover:not(:disabled),
+.mobile-product-save-button:hover:not(:disabled),
+.pi-button-primary:hover:not(:disabled),
+.mpi-action-primary:hover:not(:disabled) {
+  border-color: var(--color-action-hover);
+  background: var(--color-action-hover);
+  color: var(--color-on-action);
+}
+
+/* Focus halkaları tüm paletlerde seçilen accent rengine bağlanır. */
+.form-field input:focus,
+.form-field select:focus,
+.inventory-search-field:focus-within,
+.history-filter-control:focus-within,
+.history-status-select:focus,
+.pi-field input:focus,
+.pi-field select:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
+.confirm-dialog button:focus-visible,
+.quick-sale-discount-panel button:focus-visible,
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+  outline-color: var(--color-focus-ring);
+}
+
+/* Görünüm ve renk seçicileri artık yeşile değil aktif palette bağlı. */
+.theme-option:hover,
+.theme-option-active {
+  border-color: color-mix(in srgb, var(--color-primary) 58%, var(--color-border));
+}
+
+.theme-option-active {
+  background: var(--color-primary-soft);
+  color: var(--color-secondary);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 24%, transparent);
+}
+
+.color-theme-option-active {
+  color: var(--color-primary-dark);
+}
+
+html[data-theme="dark"] .color-theme-option-active {
+  color: var(--color-primary);
+}
+
+html[data-theme="dark"] .theme-option-active small,
+html[data-theme="dark"] .color-theme-option-active .color-theme-label {
+  color: color-mix(in srgb, currentColor 78%, var(--color-text));
+}
+
+/* Mobil aktif navigasyonun sınırı da seçili paleti kullanır. */
+.mobile-bottom-nav-item-active {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 16%, transparent);
+}
+
+.mobile-bottom-nav {
+  box-shadow: var(--shadow-bottom-nav);
+}
+
+/* Modal, drawer ve sheet katmanları light/dark ile birlikte dengelenir. */
+.pi-dialog-backdrop,
+.mpi-sheet-backdrop {
+  background: var(--color-overlay-soft);
+}
+
+.pi-dialog {
+  box-shadow: var(--shadow-floating);
+}
+
+.pi-product-drawer {
+  box-shadow: var(--shadow-side-panel);
+}
+
+.mpi-detail-sheet {
+  box-shadow: 0 -18px 48px color-mix(in srgb, var(--color-overlay) 34%, transparent);
+}
+
+.data-center-menu {
+  box-shadow: 0 18px 44px color-mix(in srgb, var(--color-overlay) 34%, transparent);
+}
+
+.data-center-protection-card {
+  box-shadow: var(--shadow-accent-soft);
+}
+
+/* Hover yüzeyleri koyu temada beyaz sabit renge kaçmaz. */
+.settings-status-dismiss:hover,
+html[data-theme="dark"] .settings-status-dismiss:hover {
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+  color: var(--color-text);
+}
+
+/* Seçili/segment durumlarında palette bağlı ama sakin bir vurgu. */
+.pi-segmented button.is-active,
+.mh-tabs button.is-active {
+  border-color: color-mix(in srgb, var(--color-primary) 24%, var(--color-border));
+  color: var(--color-secondary);
+}
+
+/* Koyu temada form kontrollerinin native yüzeyleri de koyu kalır. */
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+  color-scheme: dark;
+}
+
+/* Tema geçişi sırasında büyük alanlarda ani renk sıçramasını azaltır. */
+body,
+.sidebar,
+.mobile-bottom-nav,
+.dashboard-panel,
+.mobile-settings-action-card,
+.mobile-settings-theme-card,
+.mobile-settings-static-card,
+.pi-dialog,
+.pi-product-drawer,
+.mpi-detail-sheet {
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body,
+  .sidebar,
+  .mobile-bottom-nav,
+  .dashboard-panel,
+  .mobile-settings-action-card,
+  .mobile-settings-theme-card,
+  .mobile-settings-static-card,
+  .pi-dialog,
+  .pi-product-drawer,
+  .mpi-detail-sheet {
+    transition: none;
   }
 }
