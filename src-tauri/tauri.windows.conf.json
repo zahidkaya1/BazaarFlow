@@ -1,0 +1,28 @@
+{
+  "bundle": {
+    "targets": ["nsis", "msi"],
+    "category": "Business",
+    "publisher": "BazaarFlow",
+    "homepage": "https://github.com/zahidkaya1/BazaarFlow",
+    "shortDescription": "Satış, stok ve FIFO kârlılık takibi",
+    "longDescription": "BazaarFlow; satış, stok, parti bazlı maliyet ve FIFO kârlılık takibini tek yerde yöneten local-first bir uygulamadır.",
+    "copyright": "© 2026 BazaarFlow",
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/installer-icon.ico",
+        "uninstallerIcon": "icons/installer-icon.ico",
+        "headerImage": "installer-assets/nsis-header.bmp",
+        "uninstallerHeaderImage": "installer-assets/nsis-header.bmp",
+        "sidebarImage": "installer-assets/nsis-sidebar.bmp",
+        "installMode": "currentUser",
+        "languages": ["Turkish", "English"],
+        "displayLanguageSelector": false,
+        "compression": "lzma"
+      },
+      "wix": {
+        "bannerPath": "installer-assets/wix-banner.bmp",
+        "dialogImagePath": "installer-assets/wix-dialog.bmp"
+      }
+    }
+  }
+}
